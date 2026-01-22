@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EvAgendamento</title>
+
+  <!-- Fonte -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+
+  <!-- Background waves -->
+  <div class="waves-container">
+    <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+      <path fill="#cfe9ff"
+        d="M0,160L80,176C160,192,320,224,480,218.7C640,213,800,171,960,160C1120,149,1280,171,1360,181.3L1440,192V0H0Z" />
+    </svg>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-content header-centered">
+      <h1 class="header-title">
+        <span>EvAgendamento</span>
+      </h1>
+
+      <p class="header-subtitle">
+        Sistema de Agendamento Inteligente
+      </p>
+
+      <div class="header-actions" id="headerActions">
+        <button id="adminLoginBtn" class="admin-login-btn" title="Área Administrativa">
+          🔐
+        </button>
+        <button id="settingsBtn" class="settings-btn" title="Configurações" style="display: none;">
+          ⚙️
+        </button>
+        <button id="adminLogoutBtn" class="admin-logout-btn" title="Sair" style="display: none;">
+          🚪
+        </button>
+      </div>
+    </div>
+  </header>
+  
+
+  <!-- Main -->
+  <main>
+    <div class="container">
+      <div class="dashboard">
+
+        <!-- Card Novo Agendamento -->
+        <section class="card">
+          <h2>📅 Novo Agendamento</h2>
+          <p>Preencha os dados abaixo</p>
+
+          <form id="appointmentForm">
+            <div class="form-group">
+              <label>Nome do Cliente *</label>
+              <input type="text" name="customer_name" placeholder="Nome completo" required>
+            </div>
+
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="tel" name="customer_phone" placeholder="(11) 99999-9999">
+            </div>
+
+            <div class="form-group">
+              <label>Data *</label>
+              <input type="date" id="appointment_date" name="appointment_date" required>
+            </div>
+
+            <div class="form-group">
+              <label>Horário *</label>
+              <input type="time" id="appointment_time" name="appointment_time" placeholder="HH:MM" required>
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn-secondary" id="checkAvailability">Verificar</button>
+              <button type="submit" class="btn-primary">Criar</button>
+            </div>
+
+            <!-- Área para mostrar horários disponíveis -->
+            <div id="availableSlots" class="available-slots" style="display: none;">
+              <h4>Horários Disponíveis</h4>
+              <div id="slotsContainer" class="slots-container"></div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Card Lista -->
+        <section class="card">
+          <div class="filters">
+            <label>📆 Agendamentos por data</label>
+            <div class="filters-row">
+              <input type="date" id="filterDate">
+              <button type="button" class="btn-primary" id="refreshList">Atualizar</button>
+            </div>
+          </div>
+
+          <h3>📋 Agendamentos do Dia</h3>
+          <div id="appointmentsContainer" class="empty">
+            Selecione uma data para visualizar os agendamentos
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Modal de Configurações -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content settings-modal">
+      <div class="modal-header">
+        <h3>⚙️ Configurações</h3>
+        <button class="modal-close" id="settingsModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="integrations">Integrações</button>
+          <button class="tab-btn" data-tab="general">Geral</button>
+        </div>
+
+        <div class="tab-content">
+          <!-- Aba de Integrações -->
+          <div id="integrationsTab" class="tab-pane active">
+            <div class="integration-section">
+              <h4>🔗 ClouddChat</h4>
+              <form id="clouddchatForm" class="integration-form">
+                <div class="form-group">
+                  <label>API URL (Base URL)</label>
+                  <input type="url" id="clouddchatApiUrl" placeholder="https://api.clouddchat.com">
+                </div>
+
+                <div class="form-group">
+                  <label>Instance ID</label>
+                  <input type="text" id="clouddchatInstanceId" placeholder="your-instance-id">
+                </div>
+
+                <div class="form-group">
+                  <label>API Token</label>
+                  <input type="password" id="clouddchatApiToken" placeholder="your-api-token">
+                </div>
+
+                <div class="form-actions">
+                  <button type="button" id="testClouddchatBtn" class="btn-secondary">Testar Conexão</button>
+                  <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="integration-section">
+              <h4>🤖 n8n</h4>
+              <form id="n8nForm" class="integration-form">
+                <div class="form-group">
+                  <label>Webhook URL</label>
+                  <input type="url" id="n8nWebhookUrl" placeholder="https://your-n8n-instance.com/webhook/...">
+                </div>
+
+                <div class="form-group">
+                  <label>API Key (opcional)</label>
+                  <input type="password" id="n8nApiKey" placeholder="your-n8n-api-key">
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Aba Geral -->
+          <div id="generalTab" class="tab-pane">
+            <div class="general-settings">
+              <h4>🎨 Aparência</h4>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="darkModeToggle">
+                  Modo escuro
+                </label>
+              </div>
+
+              <h4>🔔 Notificações</h4>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="notificationsEnabled" checked>
+                  Habilitar notificações
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Edição de Agendamento -->
+  <div id="editAppointmentModal" class="modal">
+    <div class="modal-content edit-modal">
+      <div class="modal-header">
+        <h3>✏️ Editar Agendamento</h3>
+        <button class="modal-close" id="editModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editAppointmentForm">
+          <div class="form-group">
+            <label>Nome do Cliente *</label>
+            <input type="text" id="editCustomerName" name="customer_name" required>
+          </div>
+
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="tel" id="editCustomerPhone" name="customer_phone">
+          </div>
+
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" id="editAppointmentDate" name="appointment_date" required>
+          </div>
+
+          <div class="form-group">
+            <label>Horário *</label>
+            <input type="time" id="editAppointmentTime" name="appointment_time" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="editModalCancel" class="btn-secondary">Cancelar</button>
+        <button id="editModalSave" class="btn-primary">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Login Administrativo -->
+  <div id="adminLoginModal" class="modal">
+    <div class="modal-content admin-login-modal">
+      <div class="modal-header">
+        <h3>🔐 Área Administrativa</h3>
+        <button class="modal-close" id="adminLoginModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label>E-mail Administrativo</label>
+            <input type="email" id="adminEmail" placeholder="brunadevv@gmail.com" required>
+          </div>
+
+          <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="adminPassword" placeholder="Digite a senha" required>
+          </div>
+
+          <div id="adminLoginError" class="admin-login-error" style="display: none;"></div>
+
+          <button type="submit" class="btn-primary admin-login-submit">Acessar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Agendamento (Visualização) -->
+  <div id="appointmentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Detalhes do Agendamento</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Conteúdo será preenchido dinamicamente -->
+      </div>
+      <div class="modal-footer">
+        <button id="modalCancel" class="btn-secondary">Fechar</button>
+        <button id="modalSave" class="btn-primary" style="display: none;">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/settings.js"></script>
+  <script src="../js/app.js"></script>
+
+</body>
+</html>
