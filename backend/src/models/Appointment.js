@@ -42,6 +42,7 @@ class Appointment {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // Permitir agendamentos para hoje ou datas futuras
       if (appointmentDate < today) {
         errors.push('Data do agendamento não pode ser no passado');
       }

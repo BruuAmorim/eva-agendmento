@@ -77,7 +77,7 @@ module.exports = (sequelize) => {
         name: this.name
       },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '8h' }
     );
   };
 

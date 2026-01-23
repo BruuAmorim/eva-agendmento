@@ -33,8 +33,7 @@
     </p>
 
     <div class="header-actions" id="headerActions">
-      <span id="userWelcome" class="user-welcome"></span>
-      <button id="adminLogoutBtn" class="admin-logout-btn" title="Sair">
+      <button id="logoutBtn" class="logout-btn" title="Sair">
         🚪 Sair
       </button>
     </div>
@@ -166,20 +165,26 @@
         return;
       }
 
-      // Atualizar saudação do usuário
-      const userWelcome = document.getElementById('userWelcome');
-      if (userWelcome && window.authManager.currentUser) {
-        userWelcome.textContent = `Olá, ${window.authManager.currentUser.name}!`;
-      }
 
       // Botão de logout
-      const logoutBtn = document.getElementById('adminLogoutBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-          if (window.authManager) {
-            window.authManager.logout();
-          }
+          // Remover token do localStorage
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+
+          // Redirecionar para página de login
+          window.location.href = '../css/index.html';
         });
+      }
+
+      // Configurar data mínima como hoje
+      const dateInput = document.getElementById('appointment_date');
+      if (dateInput) {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        dateInput.setAttribute('min', todayStr);
       }
 
       // Inicializar funcionalidades do app
@@ -188,5 +193,53 @@
       }
     });
   </script>
+
+  <style>
+    .appointment-list-item {
+      position: relative;
+    }
+
+    .appointment-list-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 5px;
+    }
+
+    .btn-edit, .btn-delete {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .btn-edit:hover {
+      background-color: rgba(52, 152, 219, 0.1);
+    }
+
+    .btn-delete:hover {
+      background-color: rgba(231, 76, 60, 0.1);
+    }
+
+    .logout-btn {
+      background: var(--danger, #dc3545);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: var(--danger-dark, #c82333);
+    }
+  </style>
+
 </body>
 </html>

@@ -495,13 +495,33 @@ class EvAgendamento {
                 <div class="appointment-list-name">${appointment.customer_name}</div>
                 <div class="appointment-list-phone">${phone}</div>
             </div>
+            <div class="appointment-list-actions">
+                <button class="btn-edit" data-id="${appointment.id}" title="Editar">✏️</button>
+                <button class="btn-delete" data-id="${appointment.id}" title="Excluir">🗑️</button>
+            </div>
         `;
 
-        // Adicionar evento de clique para abrir modal
-        div.addEventListener('click', () => {
-            const fullAppointment = this.appointments.find(apt => apt.id === appointment.id);
-            if (fullAppointment) {
-                this.openAppointmentModal(fullAppointment);
+        // Prevenir propagação do clique nos botões
+        const editBtn = div.querySelector('.btn-edit');
+        const deleteBtn = div.querySelector('.btn-delete');
+
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.editAppointment(appointment.id);
+        });
+
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteAppointment(appointment.id);
+        });
+
+        // Adicionar evento de clique no item (exceto nos botões)
+        div.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-edit') && !e.target.classList.contains('btn-delete')) {
+                const fullAppointment = this.appointments.find(apt => apt.id === appointment.id);
+                if (fullAppointment) {
+                    this.openAppointmentModal(fullAppointment);
+                }
             }
         });
 
@@ -823,6 +843,59 @@ class EvAgendamento {
         setTimeout(() => {
             this.showToast('Bem-vindo ao EvAgendamento! Sistema de agendamento inteligente.', 'info');
         }, 1000);
+    }
+
+    // Editar agendamento
+    editAppointment(appointmentId) {
+        const appointment = this.appointments.find(apt => apt.id === appointmentId);
+        if (!appointment) {
+            this.showToast('Agendamento não encontrado', 'error');
+            return;
+        }
+
+        // Preencher modal de edição
+        document.getElementById('editCustomerName').value = appointment.customer_name;
+        document.getElementById('editCustomerPhone').value = appointment.customer_phone || '';
+        document.getElementById('editAppointmentDate').value = appointment.appointment_date;
+        document.getElementById('editAppointmentTime').value = appointment.appointment_time;
+
+        // Armazenar ID do agendamento sendo editado
+        document.getElementById('editAppointmentForm').dataset.appointmentId = appointmentId;
+
+        // Abrir modal de edição
+        document.getElementById('editAppointmentModal').classList.add('show');
+    }
+
+    // Excluir agendamento
+    async deleteAppointment(appointmentId) {
+        if (!confirm('Tem certeza que deseja excluir este agendamento?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            if (response.ok) {
+                // Remover da lista local
+                this.appointments = this.appointments.filter(apt => apt.id !== appointmentId);
+
+                // Atualizar exibição
+                this.displayAppointments();
+
+                this.showToast('Agendamento excluído com sucesso!', 'success');
+            } else {
+                const errorData = await response.json();
+                this.showToast(errorData.message || 'Erro ao excluir agendamento', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir agendamento:', error);
+            this.showToast('Erro ao excluir agendamento', 'error');
+        }
     }
 }
 

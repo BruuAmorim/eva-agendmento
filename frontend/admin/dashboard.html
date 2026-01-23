@@ -87,6 +87,9 @@
       max-width: 1200px;
       margin: 0 auto;
       padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .stats-grid {
@@ -94,6 +97,7 @@
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 20px;
       margin-bottom: 40px;
+      justify-items: center;
     }
 
     .stat-card {
@@ -218,9 +222,9 @@
         <a href="#users" class="admin-btn admin-btn-primary" id="manageUsersBtn">
           👥 Gerenciar Usuários
         </a>
-        <a href="#settings" class="admin-btn admin-btn-secondary" id="systemSettingsBtn">
+        <button type="button" class="admin-btn admin-btn-secondary" id="systemSettingsBtn">
           ⚙️ Configurações
-        </a>
+        </button>
         <button class="admin-btn admin-btn-danger" id="adminLogoutBtn">
           🚪 Sair
         </button>
