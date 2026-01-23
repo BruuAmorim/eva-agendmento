@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerenciar Usuários - EvAgendamento</title>
+
+  <!-- Fonte -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>
+    .admin-users {
+      min-height: 100vh;
+      background: var(--background);
+    }
+
+    .users-header {
+      background: white;
+      padding: 20px 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+    }
+
+    .users-header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .users-header h1 {
+      color: var(--text);
+      margin: 0;
+    }
+
+    .users-actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    .users-main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .users-controls {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 10px 15px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 300px;
+    }
+
+    .users-table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .users-table th,
+    .users-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .users-table th {
+      background: var(--background);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .users-table tbody tr:hover {
+      background: var(--background);
+    }
+
+    .user-role {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .role-admin {
+      background: var(--primary);
+      color: white;
+    }
+
+    .role-user {
+      background: var(--secondary);
+      color: var(--text);
+    }
+
+    .user-status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .status-active {
+      background: var(--success);
+      color: white;
+    }
+
+    .status-inactive {
+      background: var(--danger);
+      color: white;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .user-action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-edit {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-deactivate {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-deactivate:hover {
+      background: #c82333;
+    }
+
+    .btn-activate {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-activate:hover {
+      background: #218838;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="users-header">
+    <div class="users-header-content">
+      <h1>👥 Gerenciar Usuários</h1>
+      <div class="users-actions">
+        <button class="admin-btn admin-btn-primary" id="addUserBtn">
+          ➕ Novo Usuário
+        </button>
+        <a href="/admin/dashboard" class="admin-btn admin-btn-secondary">
+          ← Voltar ao Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="users-main">
+    <!-- Controls -->
+    <div class="users-controls">
+      <div class="search-box">
+        <input type="text" id="searchUsers" placeholder="🔍 Buscar usuários..." />
+      </div>
+      <div class="filter-box">
+        <select id="filterRole">
+          <option value="">Todos os perfis</option>
+          <option value="admin_master">Administrador</option>
+          <option value="user">Usuário</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="users-table-container">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Perfil</th>
+            <th>Status</th>
+            <th>Cadastro</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- Usuários serão carregados dinamicamente -->
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <i>👥</i>
+        <h3>Nenhum usuário encontrado</h3>
+        <p>Não há usuários cadastrados ou correspondentes aos filtros aplicados.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Novo Usuário -->
+  <div id="newUserModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>➕ Novo Usuário</h3>
+        <button class="modal-close" id="newUserModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="newUserForm">
+          <div class="form-group">
+            <label>Nome Completo *</label>
+            <input type="text" id="newUserName" placeholder="Digite o nome completo" required>
+          </div>
+          <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" id="newUserEmail" placeholder="exemplo@email.com" required>
+          </div>
+          <div class="form-group">
+            <label>Senha *</label>
+            <input type="password" id="newUserPassword" placeholder="Digite a senha" required>
+          </div>
+          <div class="form-group">
+            <label>Perfil *</label>
+            <select id="newUserRole" required>
+              <option value="user">Usuário Comum</option>
+              <option value="admin_master">Administrador Master</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="admin-btn admin-btn-secondary" id="cancelNewUserBtn">Cancelar</button>
+        <button class="admin-btn admin-btn-primary" id="saveNewUserBtn">Criar Usuário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editar Usuário -->
+  <div id="editUserModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ Editar Usuário</h3>
+        <button class="modal-close" id="editUserModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editUserForm">
+          <input type="hidden" id="editUserId">
+          <div class="form-group">
+            <label>Nome Completo *</label>
+            <input type="text" id="editUserName" placeholder="Digite o nome completo" required>
+          </div>
+          <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" id="editUserEmail" placeholder="exemplo@email.com" required>
+          </div>
+          <div class="form-group">
+            <label>Nova Senha (deixe vazio para manter)</label>
+            <input type="password" id="editUserPassword" placeholder="Digite a nova senha">
+          </div>
+          <div class="form-group">
+            <label>Perfil *</label>
+            <select id="editUserRole" required>
+              <option value="user">Usuário Comum</option>
+              <option value="admin_master">Administrador Master</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="editUserActive"> Usuário ativo
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="admin-btn admin-btn-secondary" id="cancelEditUserBtn">Cancelar</button>
+        <button class="admin-btn admin-btn-primary" id="saveEditUserBtn">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    // Gerenciamento de Usuários
+    class UserManagement {
+      constructor() {
+        this.users = [];
+        this.filteredUsers = [];
+        this.init();
+      }
+
+      init() {
+        this.checkAdminAccess();
+        this.bindEvents();
+        this.loadUsers();
+      }
+
+      checkAdminAccess() {
+        if (!window.authManager || !window.authManager.isAdmin()) {
+          window.location.href = '/';
+          return;
+        }
+      }
+
+      bindEvents() {
+        // Busca
+        const searchInput = document.getElementById('searchUsers');
+        if (searchInput) {
+          searchInput.addEventListener('input', () => this.filterUsers());
+        }
+
+        // Filtro por role
+        const filterRole = document.getElementById('filterRole');
+        if (filterRole) {
+          filterRole.addEventListener('change', () => this.filterUsers());
+        }
+
+        // Novo usuário
+        const addUserBtn = document.getElementById('addUserBtn');
+        if (addUserBtn) {
+          addUserBtn.addEventListener('click', () => this.openNewUserModal());
+        }
+
+        // Modal novo usuário
+        const newUserModalClose = document.getElementById('newUserModalClose');
+        if (newUserModalClose) {
+          newUserModalClose.addEventListener('click', () => this.closeNewUserModal());
+        }
+
+        const cancelNewUserBtn = document.getElementById('cancelNewUserBtn');
+        if (cancelNewUserBtn) {
+          cancelNewUserBtn.addEventListener('click', () => this.closeNewUserModal());
+        }
+
+        const saveNewUserBtn = document.getElementById('saveNewUserBtn');
+        if (saveNewUserBtn) {
+          saveNewUserBtn.addEventListener('click', (e) => this.saveNewUser(e));
+        }
+
+        // Modal editar usuário
+        const editUserModalClose = document.getElementById('editUserModalClose');
+        if (editUserModalClose) {
+          editUserModalClose.addEventListener('click', () => this.closeEditUserModal());
+        }
+
+        const cancelEditUserBtn = document.getElementById('cancelEditUserBtn');
+        if (cancelEditUserBtn) {
+          cancelEditUserBtn.addEventListener('click', () => this.closeEditUserModal());
+        }
+
+        const saveEditUserBtn = document.getElementById('saveEditUserBtn');
+        if (saveEditUserBtn) {
+          saveEditUserBtn.addEventListener('click', (e) => this.saveEditUser(e));
+        }
+      }
+
+      async loadUsers() {
+        try {
+          const response = await window.authManager.apiRequest('/api/users');
+          if (response.success) {
+            this.users = response.users;
+            this.filteredUsers = [...this.users];
+            this.renderUsers();
+          }
+        } catch (error) {
+          console.error('Erro ao carregar usuários:', error);
+          this.showToast('Erro ao carregar usuários', 'error');
+        }
+      }
+
+      filterUsers() {
+        const searchTerm = document.getElementById('searchUsers').value.toLowerCase();
+        const roleFilter = document.getElementById('filterRole').value;
+
+        this.filteredUsers = this.users.filter(user => {
+          const matchesSearch = user.name.toLowerCase().includes(searchTerm) ||
+                               user.email.toLowerCase().includes(searchTerm);
+          const matchesRole = !roleFilter || user.role === roleFilter;
+
+          return matchesSearch && matchesRole;
+        });
+
+        this.renderUsers();
+      }
+
+      renderUsers() {
+        const tbody = document.getElementById('usersTableBody');
+        const emptyState = document.getElementById('emptyState');
+
+        if (!tbody) return;
+
+        if (this.filteredUsers.length === 0) {
+          tbody.innerHTML = '';
+          if (emptyState) emptyState.style.display = 'block';
+          return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        tbody.innerHTML = this.filteredUsers.map(user => `
+          <tr>
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td>
+              <span class="user-role role-${user.role}">
+                ${user.role === 'admin_master' ? 'Admin' : 'Usuário'}
+              </span>
+            </td>
+            <td>
+              <span class="user-status ${user.isActive ? 'status-active' : 'status-inactive'}">
+                ${user.isActive ? 'Ativo' : 'Inativo'}
+              </span>
+            </td>
+            <td>${new Date(user.createdAt).toLocaleDateString('pt-BR')}</td>
+            <td>
+              <div class="user-actions">
+                <button class="user-action-btn btn-edit" onclick="userManagement.editUser(${user.id})">
+                  ✏️ Editar
+                </button>
+                ${user.isActive ?
+                  `<button class="user-action-btn btn-deactivate" onclick="userManagement.toggleUserStatus(${user.id}, false)">
+                    🚫 Desativar
+                  </button>` :
+                  `<button class="user-action-btn btn-activate" onclick="userManagement.toggleUserStatus(${user.id}, true)">
+                    ✅ Reativar
+                  </button>`
+                }
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      openNewUserModal() {
+        const modal = document.getElementById('newUserModal');
+        if (modal) {
+          modal.classList.add('show');
+          document.getElementById('newUserName').focus();
+        }
+      }
+
+      closeNewUserModal() {
+        const modal = document.getElementById('newUserModal');
+        if (modal) {
+          modal.classList.remove('show');
+          document.getElementById('newUserForm').reset();
+        }
+      }
+
+      async saveNewUser(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('newUserName').value.trim();
+        const email = document.getElementById('newUserEmail').value.toLowerCase().trim();
+        const password = document.getElementById('newUserPassword').value;
+        const role = document.getElementById('newUserRole').value;
+
+        if (!name || !email || !password) {
+          this.showToast('Preencha todos os campos obrigatórios', 'error');
+          return;
+        }
+
+        try {
+          const response = await window.authManager.apiRequest('/api/users', {
+            method: 'POST',
+            body: JSON.stringify({ name, email, password, role })
+          });
+
+          if (response.success) {
+            this.showToast('Usuário criado com sucesso!', 'success');
+            this.closeNewUserModal();
+            this.loadUsers();
+          } else {
+            this.showToast(response.message || 'Erro ao criar usuário', 'error');
+          }
+        } catch (error) {
+          console.error('Erro ao criar usuário:', error);
+          this.showToast('Erro ao criar usuário', 'error');
+        }
+      }
+
+      editUser(userId) {
+        const user = this.users.find(u => u.id === userId);
+        if (!user) return;
+
+        // Preencher modal
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editUserName').value = user.name;
+        document.getElementById('editUserEmail').value = user.email;
+        document.getElementById('editUserPassword').value = '';
+        document.getElementById('editUserRole').value = user.role;
+        document.getElementById('editUserActive').checked = user.isActive;
+
+        // Abrir modal
+        const modal = document.getElementById('editUserModal');
+        if (modal) {
+          modal.classList.add('show');
+        }
+      }
+
+      closeEditUserModal() {
+        const modal = document.getElementById('editUserModal');
+        if (modal) {
+          modal.classList.remove('show');
+          document.getElementById('editUserForm').reset();
+        }
+      }
+
+      async saveEditUser(e) {
+        e.preventDefault();
+
+        const id = document.getElementById('editUserId').value;
+        const name = document.getElementById('editUserName').value.trim();
+        const email = document.getElementById('editUserEmail').value.toLowerCase().trim();
+        const password = document.getElementById('editUserPassword').value;
+        const role = document.getElementById('editUserRole').value;
+        const isActive = document.getElementById('editUserActive').checked;
+
+        if (!name || !email) {
+          this.showToast('Preencha todos os campos obrigatórios', 'error');
+          return;
+        }
+
+        const updateData = { name, email, role, isActive };
+        if (password) updateData.password = password;
+
+        try {
+          const response = await window.authManager.apiRequest(`/api/users/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(updateData)
+          });
+
+          if (response.success) {
+            this.showToast('Usuário atualizado com sucesso!', 'success');
+            this.closeEditUserModal();
+            this.loadUsers();
+          } else {
+            this.showToast(response.message || 'Erro ao atualizar usuário', 'error');
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar usuário:', error);
+          this.showToast('Erro ao atualizar usuário', 'error');
+        }
+      }
+
+      async toggleUserStatus(userId, activate) {
+        try {
+          const endpoint = activate ? `/api/users/${userId}/reactivate` : `/api/users/${userId}`;
+          const method = activate ? 'PATCH' : 'DELETE';
+
+          const response = await window.authManager.apiRequest(endpoint, { method });
+
+          if (response.success) {
+            this.showToast(`Usuário ${activate ? 'reativado' : 'desativado'} com sucesso!`, 'success');
+            this.loadUsers();
+          } else {
+            this.showToast(response.message || 'Erro ao alterar status do usuário', 'error');
+          }
+        } catch (error) {
+          console.error('Erro ao alterar status do usuário:', error);
+          this.showToast('Erro ao alterar status do usuário', 'error');
+        }
+      }
+
+      showToast(message, type = 'info') {
+        if (window.authManager) {
+          window.authManager.showToast(message, type);
+        } else {
+          alert(message);
+        }
+      }
+    }
+
+    // Instância global
+    const userManagement = new UserManagement();
+
+    // Inicializar quando DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', () => {
+      // Já inicializado no constructor
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+const { Sequelize } = require('sequelize');
+const User = require('./User');
+const Appointment = require('./Appointment');
+
+// Configuração do Sequelize (SQLite para desenvolvimento)
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: process.env.DB_STORAGE || './database.sqlite',
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  }
+});
+
+// Inicializar modelos
+const UserModel = User(sequelize);
+const AppointmentModel = Appointment;
+
+// Testar conexão e sincronizar
+async function initializeDatabase() {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Conexão com banco de dados estabelecida via Sequelize');
+
+    // Sincronizar modelos (criar tabelas se não existirem)
+    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    console.log('📋 Modelos sincronizados com sucesso');
+
+  } catch (error) {
+    console.error('❌ Erro ao inicializar banco de dados:', error);
+    throw error;
+  }
+}
+
+module.exports = {
+  sequelize,
+  User: UserModel,
+  Appointment: AppointmentModel,
+  initializeDatabase
+};

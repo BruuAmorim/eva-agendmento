@@ -103,6 +103,8 @@ class EvAgendamento {
             const modal = document.getElementById('appointmentModal');
             const editModal = document.getElementById('editAppointmentModal');
             const settingsModal = document.getElementById('settingsModal');
+            const usersModal = document.getElementById('usersModal');
+            const adminLoginModal = document.getElementById('adminLoginModal');
 
             if (e.target === modal) {
                 this.closeModal();
@@ -114,6 +116,23 @@ class EvAgendamento {
 
             if (settingsModal && e.target === settingsModal) {
                 settingsModal.classList.remove('show');
+            }
+
+            if (usersModal && e.target === usersModal) {
+                if (window.authManager) {
+                    window.authManager.closeUsersModal();
+                }
+            }
+
+            // Proteger modal de login - não permitir fechar ao clicar fora se não estiver logado
+            if (adminLoginModal && e.target === adminLoginModal) {
+                const userDataStr = localStorage.getItem('userData');
+                if (!userDataStr) {
+                    // Não permitir fechar se não estiver logado
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
             }
         });
 
@@ -140,6 +159,14 @@ class EvAgendamento {
                 this.loadAppointments();
             });
         }
+
+        // Filtro de busca em tempo real
+        const filtroNome = document.getElementById('filtro-nome');
+        if (filtroNome) {
+            filtroNome.addEventListener('keyup', () => {
+                this.filterAppointmentsByName();
+            });
+        }
     }
 
     setTheme(theme) {
@@ -155,13 +182,27 @@ class EvAgendamento {
 
     async loadInitialData() {
         try {
-            // Verificar conexão com API
-            await API.testConnection();
+            // Verificar conexão com API (opcional - não bloqueia a aplicação)
+            try {
+                await API.testConnection();
+            } catch (apiError) {
+                // API não disponível - aplicação continua funcionando normalmente
+                console.log('API não disponível - aplicação funcionará em modo offline');
+            }
 
-            // Não carregar nada inicialmente - aguardar seleção de data
+            // Carregar agendamentos se houver data selecionada
+            const filterDate = document.getElementById('filterDate');
+            if (filterDate && filterDate.value) {
+                try {
+                    await this.loadAppointments();
+                } catch (loadError) {
+                    // Erro ao carregar agendamentos - não bloqueia a aplicação
+                    console.log('Não foi possível carregar agendamentos da API');
+                }
+            }
         } catch (error) {
-            console.error('Erro ao conectar com API:', error);
-            this.showToast('Erro de conexão com o servidor', 'error');
+            // Erro geral - apenas logar, não mostrar toast para não incomodar o usuário
+            console.log('Aplicação carregada (modo offline):', error.message);
         }
     }
 
@@ -187,13 +228,44 @@ class EvAgendamento {
 
     generateAvailableSlots(selectedDate) {
         const slots = [];
-        const startHour = 8; // 8:00
-        const endHour = 18; // 18:00
+        
+        // Verificar regras de agendamento
+        const rules = SettingsManager.getBusinessRules();
+        
+        // Verificar se o dia da semana está ativo
+        const selectedDateObj = new Date(selectedDate);
+        const dayOfWeek = selectedDateObj.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = dayNames[dayOfWeek];
+        
+        const workDays = rules.workDays || {};
+        if (workDays[dayName] !== true) {
+            // Dia não está ativo
+            return []; // Retorna array vazio - será tratado na exibição
+        }
+
+        // Obter horários de funcionamento
+        const businessHours = rules.businessHours || {};
+        const openingTime = businessHours.opening || '09:00';
+        const closingTime = businessHours.closing || '18:00';
+        const lunchStart = businessHours.lunchStart || '12:00';
+        const lunchEnd = businessHours.lunchEnd || '13:00';
+
+        // Converter horários para números
+        const openingHour = parseInt(openingTime.split(':')[0]);
+        const closingHour = parseInt(closingTime.split(':')[0]);
+        const lunchStartHour = parseInt(lunchStart.split(':')[0]);
+        const lunchEndHour = parseInt(lunchEnd.split(':')[0]);
 
         // Buscar agendamentos para a data selecionada
         const dateAppointments = this.appointments.filter(apt => apt.appointment_date === selectedDate);
 
-        for (let hour = startHour; hour < endHour; hour++) {
+        for (let hour = openingHour; hour < closingHour; hour++) {
+            // Verificar se está dentro do intervalo de almoço
+            if (hour >= lunchStartHour && hour < lunchEndHour) {
+                continue; // Pular horários de almoço
+            }
+
             const timeString = `${hour.toString().padStart(2, '0')}:00`;
 
             // Verificar se há conflito com agendamentos existentes
@@ -216,6 +288,23 @@ class EvAgendamento {
     displayAvailableSlots() {
         const container = document.getElementById('slotsContainer');
         container.innerHTML = '';
+
+        // Verificar se o dia está ativo
+        const selectedDate = document.getElementById('appointment_date').value;
+        if (selectedDate) {
+            const selectedDateObj = new Date(selectedDate);
+            const dayOfWeek = selectedDateObj.getDay();
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = dayNames[dayOfWeek];
+            
+            const rules = SettingsManager.getBusinessRules();
+            const workDays = rules.workDays || {};
+            
+            if (workDays[dayName] !== true) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-weight: 500;">⚠️ Não atendemos neste dia</p>';
+                return;
+            }
+        }
 
         if (this.availableSlots.length === 0) {
             container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Nenhum horário disponível para esta data</p>';
@@ -254,6 +343,10 @@ class EvAgendamento {
 
     async handleAppointmentSubmit(form) {
         const formData = new FormData(form);
+        
+        // Obter instance_id do usuário logado
+        const currentInstanceId = localStorage.getItem('currentInstanceId');
+        
         const appointmentData = {
             customer_name: formData.get('customer_name'),
             customer_phone: formData.get('customer_phone'),
@@ -262,6 +355,12 @@ class EvAgendamento {
             duration_minutes: 60, // duração fixa de 1 hora
             notes: '' // sem observações
         };
+
+        // Adicionar instance_id ao agendamento (quando a API suportar)
+        if (currentInstanceId) {
+            // appointmentData.instance_id = currentInstanceId;
+            console.log('Criando agendamento para instância:', currentInstanceId);
+        }
 
         try {
             const response = await API.createAppointment(appointmentData);
@@ -293,9 +392,34 @@ class EvAgendamento {
     async loadAppointments() {
         try {
             const filters = this.getCurrentFilters();
+            
+            // Preparar para filtro por instância (futuro)
+            // Por enquanto, vamos apenas adicionar o instance_id aos filtros se existir
+            const currentInstanceId = localStorage.getItem('currentInstanceId');
+            if (currentInstanceId) {
+                // Quando a API suportar, adicionar filtro por instance_id
+                // filters.instance_id = currentInstanceId;
+                console.log('Carregando agendamentos para instância:', currentInstanceId);
+            }
+            
             const response = await API.getAppointments(filters);
-            this.appointments = response.data;
+            let appointments = response.data || [];
+            
+            // Filtro local por instance_id (temporário até API suportar)
+            // Por enquanto, vamos apenas logar - quando os agendamentos tiverem instance_id, filtrar aqui
+            if (currentInstanceId) {
+                // Filtrar agendamentos por instance_id quando o campo existir
+                // appointments = appointments.filter(apt => apt.instance_id === currentInstanceId);
+            }
+            
+            this.appointments = appointments;
             this.displayAppointments();
+            
+            // Limpar filtro de busca ao carregar novos agendamentos
+            const filtroNome = document.getElementById('filtro-nome');
+            if (filtroNome) {
+                filtroNome.value = '';
+            }
         } catch (error) {
             console.error('Erro ao carregar agendamentos:', error);
             this.showToast('Erro ao carregar agendamentos', 'error');
@@ -319,14 +443,21 @@ class EvAgendamento {
 
 
     displayAppointments() {
-        const container = document.getElementById('appointmentsContainer');
-        container.innerHTML = '';
+        const listaContainer = document.getElementById('lista-agendamentos');
+        
+        if (!listaContainer) {
+            console.error('Container lista-agendamentos não encontrado');
+            return;
+        }
+
+        // Limpar container
+        listaContainer.innerHTML = '';
 
         const filterDate = document.getElementById('filterDate').value;
 
         if (!filterDate) {
-            container.innerHTML = `
-                <div class="no-data-message">
+            listaContainer.innerHTML = `
+                <div class="no-appointments-message">
                     <p>📅 Selecione uma data para visualizar os agendamentos</p>
                 </div>
             `;
@@ -334,18 +465,93 @@ class EvAgendamento {
         }
 
         if (this.appointments.length === 0) {
-            container.innerHTML = `
-                <div class="no-data-message">
+            listaContainer.innerHTML = `
+                <div class="no-appointments-message">
                     <p>📭 Nenhum agendamento encontrado para ${new Date(filterDate).toLocaleDateString('pt-BR')}</p>
                 </div>
             `;
             return;
         }
 
+        // Renderizar agendamentos na nova lista
         this.appointments.forEach(appointment => {
-            const appointmentElement = this.createAppointmentElement(appointment);
-            container.appendChild(appointmentElement);
+            const listItem = this.createAppointmentListItem(appointment);
+            listaContainer.appendChild(listItem);
         });
+    }
+
+    createAppointmentListItem(appointment) {
+        const div = document.createElement('div');
+        div.className = 'appointment-list-item';
+        div.dataset.id = appointment.id;
+        div.dataset.name = appointment.customer_name.toLowerCase();
+
+        const time = appointment.appointment_time;
+        const phone = appointment.customer_phone || 'Sem telefone';
+
+        div.innerHTML = `
+            <div class="appointment-list-time">${time}</div>
+            <div class="appointment-list-info">
+                <div class="appointment-list-name">${appointment.customer_name}</div>
+                <div class="appointment-list-phone">${phone}</div>
+            </div>
+        `;
+
+        // Adicionar evento de clique para abrir modal
+        div.addEventListener('click', () => {
+            const fullAppointment = this.appointments.find(apt => apt.id === appointment.id);
+            if (fullAppointment) {
+                this.openAppointmentModal(fullAppointment);
+            }
+        });
+
+        return div;
+    }
+
+    filterAppointmentsByName() {
+        const filtroInput = document.getElementById('filtro-nome');
+        if (!filtroInput) return;
+
+        const searchTerm = filtroInput.value.toLowerCase().trim();
+        const listItems = document.querySelectorAll('.appointment-list-item');
+
+        if (searchTerm === '') {
+            // Mostrar todos os itens
+            listItems.forEach(item => {
+                item.classList.remove('hidden');
+            });
+        } else {
+            // Filtrar itens
+            listItems.forEach(item => {
+                const name = item.dataset.name || '';
+                if (name.includes(searchTerm)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Verificar se há itens visíveis
+            const visibleItems = Array.from(listItems).filter(item => !item.classList.contains('hidden'));
+            const listaContainer = document.getElementById('lista-agendamentos');
+            
+            // Se não houver itens visíveis, mostrar mensagem
+            if (visibleItems.length === 0 && listaContainer) {
+                const existingMessage = listaContainer.querySelector('.no-appointments-message');
+                if (!existingMessage) {
+                    const message = document.createElement('div');
+                    message.className = 'no-appointments-message';
+                    message.innerHTML = '<p>Nenhum agendamento encontrado</p>';
+                    listaContainer.appendChild(message);
+                }
+            } else {
+                // Remover mensagem se houver itens visíveis
+                const existingMessage = listaContainer.querySelector('.no-appointments-message');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+            }
+        }
     }
 
     createAppointmentElement(appointment) {

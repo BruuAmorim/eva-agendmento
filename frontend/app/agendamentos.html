@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Agendamentos - EvAgendamento</title>
+
+  <!-- Fonte -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+  <!-- Background waves -->
+  <div class="waves-container" id="wavesContainer">
+    <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+      <path fill="#cfe9ff"
+        d="M0,160L80,176C160,192,320,224,480,218.7C640,213,800,171,960,160C1120,149,1280,171,1360,181.3L1440,192V0H0Z" />
+    </svg>
+  </div>
+
+  <!-- Header -->
+  <header id="mainHeader">
+  <div class="header-content header-centered">
+    <h1 class="header-title">
+      <span>Sistema de Agendamentos</span>
+    </h1>
+
+    <p class="header-subtitle">
+      Gerencie seus agendamentos de forma simples e eficiente
+    </p>
+
+    <div class="header-actions" id="headerActions">
+      <span id="userWelcome" class="user-welcome"></span>
+      <button id="adminLogoutBtn" class="admin-logout-btn" title="Sair">
+        🚪 Sair
+      </button>
+    </div>
+  </div>
+  </header>
+
+  <!-- Main -->
+  <main id="mainContent">
+    <div class="container">
+      <div class="dashboard">
+
+        <!-- Card Novo Agendamento -->
+        <section class="card">
+          <h2>📅 Novo Agendamento</h2>
+          <p>Preencha os dados abaixo para criar um novo agendamento</p>
+
+          <form id="appointmentForm">
+            <div class="form-group">
+              <label>Nome do Cliente *</label>
+              <input type="text" name="customer_name" placeholder="Nome completo" required>
+            </div>
+
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="tel" name="customer_phone" placeholder="(11) 99999-9999">
+            </div>
+
+            <div class="form-group">
+              <label>Data *</label>
+              <input type="date" id="appointment_date" name="appointment_date" required>
+            </div>
+
+            <div class="form-group">
+              <label>Horário *</label>
+              <input type="time" id="appointment_time" name="appointment_time" placeholder="HH:MM" required>
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn-secondary" id="checkAvailability">Verificar Disponibilidade</button>
+              <button type="submit" class="btn-primary">Criar Agendamento</button>
+            </div>
+
+            <!-- Área para mostrar horários disponíveis -->
+            <div id="availableSlots" class="available-slots" style="display: none;">
+              <h4>Horários Disponíveis</h4>
+              <div id="slotsContainer" class="slots-container"></div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Card Lista de Agendamentos -->
+        <section class="card">
+          <div class="filters">
+            <label>📆 Agendamentos por data</label>
+            <div class="filters-row">
+              <input type="date" id="filterDate">
+              <button type="button" class="btn-primary" id="refreshList">Atualizar Lista</button>
+            </div>
+          </div>
+
+          <h3>📋 Agendamentos do Dia</h3>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <input type="text" id="filtro-nome" placeholder="🔍 Buscar cliente neste dia..." style="margin-bottom: 0;">
+          </div>
+
+          <div id="lista-agendamentos" style="max-height: 400px; overflow-y: auto; margin-top: 16px;">
+            <div class="no-appointments-message">
+              Selecione uma data para visualizar os agendamentos
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Modal de Edição de Agendamento -->
+  <div id="editAppointmentModal" class="modal">
+    <div class="modal-content edit-modal">
+      <div class="modal-header">
+        <h3>✏️ Editar Agendamento</h3>
+        <button class="modal-close" id="editModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editAppointmentForm">
+          <div class="form-group">
+            <label>Nome do Cliente *</label>
+            <input type="text" id="editCustomerName" name="customer_name" required>
+          </div>
+
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="tel" id="editCustomerPhone" name="customer_phone">
+          </div>
+
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" id="editAppointmentDate" name="appointment_date" required>
+          </div>
+
+          <div class="form-group">
+            <label>Horário *</label>
+            <input type="time" id="editAppointmentTime" name="appointment_time" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="editModalCancel" class="btn-secondary">Cancelar</button>
+        <button id="editModalSave" class="btn-primary">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/app.js"></script>
+
+  <script>
+    // Inicializar aplicação do usuário
+    document.addEventListener('DOMContentLoaded', () => {
+      // Verificar se usuário está autenticado e é do tipo correto
+      if (!window.authManager || !window.authManager.isAuthenticated() || window.authManager.isAdmin()) {
+        window.location.href = '/';
+        return;
+      }
+
+      // Atualizar saudação do usuário
+      const userWelcome = document.getElementById('userWelcome');
+      if (userWelcome && window.authManager.currentUser) {
+        userWelcome.textContent = `Olá, ${window.authManager.currentUser.name}!`;
+      }
+
+      // Botão de logout
+      const logoutBtn = document.getElementById('adminLogoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          if (window.authManager) {
+            window.authManager.logout();
+          }
+        });
+      }
+
+      // Inicializar funcionalidades do app
+      if (window.app) {
+        window.app.init();
+      }
+    });
+  </script>
+</body>
+</html>

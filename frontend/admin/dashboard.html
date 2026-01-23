@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Administrativo - EvAgendamento</title>
+
+  <!-- Fonte -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>
+    .admin-dashboard {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .admin-header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 20px 0;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .admin-header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .admin-header h1 {
+      color: var(--primary);
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    .admin-actions {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .admin-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .admin-btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .admin-btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .admin-btn-secondary {
+      background: var(--secondary);
+      color: var(--text);
+    }
+
+    .admin-btn-secondary:hover {
+      background: var(--secondary-dark);
+    }
+
+    .admin-btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .admin-btn-danger:hover {
+      background: #c82333;
+    }
+
+    .admin-main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      border-left: 4px solid var(--primary);
+    }
+
+    .stat-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 2rem;
+      color: var(--primary);
+    }
+
+    .stat-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .dashboard-sections {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+    }
+
+    .dashboard-section {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-section h2 {
+      margin: 0 0 20px 0;
+      color: var(--text);
+      font-size: 1.4rem;
+    }
+
+    .recent-activities {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .activity-item {
+      padding: 15px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-info h4 {
+      margin: 0 0 5px 0;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .activity-info p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .activity-time {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+
+    .quick-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.3s ease;
+    }
+
+    .quick-action-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .quick-action-btn i {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .quick-action-btn span {
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header Administrativo -->
+  <header class="admin-header">
+    <div class="admin-header-content">
+      <h1>🏢 Dashboard Administrativo</h1>
+      <div class="admin-actions">
+        <a href="#users" class="admin-btn admin-btn-primary" id="manageUsersBtn">
+          👥 Gerenciar Usuários
+        </a>
+        <a href="#settings" class="admin-btn admin-btn-secondary" id="systemSettingsBtn">
+          ⚙️ Configurações
+        </a>
+        <button class="admin-btn admin-btn-danger" id="adminLogoutBtn">
+          🚪 Sair
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+    <!-- Estatísticas -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <h3 id="totalUsers">0</h3>
+        <p>Usuários Totais</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="activeUsers">0</h3>
+        <p>Usuários Ativos</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="totalAppointments">0</h3>
+        <p>Agendamentos Hoje</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="systemHealth">98%</h3>
+        <p>Saúde do Sistema</p>
+      </div>
+    </section>
+
+    <!-- Seções do Dashboard -->
+    <div class="dashboard-sections">
+      <!-- Atividades Recentes -->
+      <section class="dashboard-section">
+        <h2>📋 Atividades Recentes</h2>
+        <ul class="recent-activities" id="recentActivities">
+          <li class="activity-item">
+            <div class="activity-info">
+              <h4>Novo usuário cadastrado</h4>
+              <p>João Silva foi adicionado ao sistema</p>
+            </div>
+            <span class="activity-time">2h atrás</span>
+          </li>
+          <li class="activity-item">
+            <div class="activity-info">
+              <h4>Agendamento realizado</h4>
+              <p>Cliente Maria solicitou agendamento</p>
+            </div>
+            <span class="activity-time">4h atrás</span>
+          </li>
+          <li class="activity-item">
+            <div class="activity-info">
+              <h4>Integração configurada</h4>
+              <p>Webhook n8n foi atualizado</p>
+            </div>
+            <span class="activity-time">1d atrás</span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Ações Rápidas -->
+      <section class="dashboard-section">
+        <h2>⚡ Ações Rápidas</h2>
+        <div class="quick-actions">
+          <a href="#users" class="quick-action-btn" id="quickUsersBtn">
+            <i>👥</i>
+            <span>Gerenciar<br>Usuários</span>
+          </a>
+          <a href="#integrations" class="quick-action-btn" id="quickIntegrationsBtn">
+            <i>🔗</i>
+            <span>Configurar<br>Integrações</span>
+          </a>
+          <a href="#reports" class="quick-action-btn" id="quickReportsBtn">
+            <i>📊</i>
+            <span>Relatórios<br>& Analytics</span>
+          </a>
+          <a href="#backup" class="quick-action-btn" id="quickBackupBtn">
+            <i>💾</i>
+            <span>Backup<br>& Segurança</span>
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    // Dashboard Administrativo
+    class AdminDashboard {
+      constructor() {
+        this.init();
+      }
+
+      init() {
+        this.checkAdminAccess();
+        this.bindEvents();
+        this.loadDashboardData();
+      }
+
+      checkAdminAccess() {
+        if (!window.authManager || !window.authManager.isAdmin()) {
+          window.location.href = '/';
+          return;
+        }
+      }
+
+      bindEvents() {
+        // Botão de logout
+        const logoutBtn = document.getElementById('adminLogoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+            if (window.authManager) {
+              window.authManager.logout();
+            }
+          });
+        }
+
+        // Botão de gerenciar usuários
+        const manageUsersBtn = document.getElementById('manageUsersBtn');
+        if (manageUsersBtn) {
+          manageUsersBtn.addEventListener('click', () => {
+            window.location.href = '/admin/users';
+          });
+        }
+
+        // Botão de configurações do sistema
+        const systemSettingsBtn = document.getElementById('systemSettingsBtn');
+        if (systemSettingsBtn) {
+          systemSettingsBtn.addEventListener('click', () => {
+            window.location.href = '/admin/settings';
+          });
+        }
+
+        // Ações rápidas
+        const quickUsersBtn = document.getElementById('quickUsersBtn');
+        if (quickUsersBtn) {
+          quickUsersBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/admin/users';
+          });
+        }
+
+        const quickIntegrationsBtn = document.getElementById('quickIntegrationsBtn');
+        if (quickIntegrationsBtn) {
+          quickIntegrationsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/admin/settings';
+          });
+        }
+      }
+
+      async loadDashboardData() {
+        try {
+          // Carregar estatísticas dos usuários
+          const usersResponse = await window.authManager.apiRequest('/api/users');
+          if (usersResponse.success) {
+            const totalUsersEl = document.getElementById('totalUsers');
+            const activeUsersEl = document.getElementById('activeUsers');
+
+            const users = usersResponse.users;
+            const totalUsers = users.length;
+            const activeUsers = users.filter(u => u.isActive).length;
+
+            if (totalUsersEl) totalUsersEl.textContent = totalUsers;
+            if (activeUsersEl) activeUsersEl.textContent = activeUsers;
+          }
+
+          // Carregar estatísticas de agendamentos (hoje)
+          const today = new Date().toISOString().split('T')[0];
+          const appointmentsResponse = await window.authManager.apiRequest(`/api/appointments?date=${today}`);
+          if (appointmentsResponse.success) {
+            const totalAppointmentsEl = document.getElementById('totalAppointments');
+            if (totalAppointmentsEl) {
+              totalAppointmentsEl.textContent = appointmentsResponse.appointments?.length || 0;
+            }
+          }
+
+        } catch (error) {
+          console.error('Erro ao carregar dados do dashboard:', error);
+        }
+      }
+    }
+
+    // Inicializar dashboard quando DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', () => {
+      new AdminDashboard();
+    });
+  </script>
+</body>
+</html>

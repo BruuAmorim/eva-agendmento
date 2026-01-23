@@ -1,259 +1,47 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste API - EvAgendamento</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .test-section {
-            background: white;
-            padding: 20px;
-            margin: 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .result {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover { background: #0056b3; }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste - EvAgendamento</title>
 </head>
 <body>
-    <h1>🧪 Teste da API EvAgendamento</h1>
+  <h1>Teste - Sistema Funcionando</h1>
+  <p>Se você consegue ver esta página, o servidor web está funcionando corretamente.</p>
 
-    <div class="test-section">
-        <h2>Health Check</h2>
-        <button onclick="testHealth()">Testar Conexão</button>
-        <div id="healthResult" class="result" style="display: none;"></div>
-    </div>
+  <h2>Links de Teste:</h2>
+  <ul>
+    <li><a href="/css/index.html">Página de Login</a></li>
+    <li><a href="/admin/dashboard">Dashboard Admin</a></li>
+    <li><a href="/app/agendamentos">Sistema de Agendamentos</a></li>
+  </ul>
 
-    <div class="test-section">
-        <h2>Horários Disponíveis</h2>
-        <input type="date" id="testDate">
-        <button onclick="testAvailableSlots()">Buscar Horários</button>
-        <div id="slotsResult" class="result" style="display: none;"></div>
-    </div>
+  <h2>Status dos Servidores:</h2>
+  <div id="status"></div>
 
-    <div class="test-section">
-        <h2>Criar Agendamento</h2>
-        <input type="text" id="customerName" placeholder="Nome do cliente" value="João Teste">
-        <input type="tel" id="customerPhone" placeholder="Telefone" value="(11) 99999-9999">
-        <input type="date" id="appointmentDate">
-        <input type="time" id="appointmentTime" value="14:00">
-        <button onclick="testCreateAppointment()">Criar Agendamento</button>
-        <div id="createResult" class="result" style="display: none;"></div>
-    </div>
+  <script>
+    // Testar conectividade
+    async function testConnection() {
+      const statusDiv = document.getElementById('status');
 
-    <div class="test-section">
-        <h2>Logs</h2>
-        <textarea id="logs" rows="10" readonly></textarea>
-    </div>
+      try {
+        // Testar backend
+        const backendResponse = await fetch('http://localhost:3000/health');
+        const backendStatus = backendResponse.ok ? '✅ Backend OK' : '❌ Backend com problema';
 
-    <script>
-        function log(message) {
-            const logs = document.getElementById('logs');
-            const timestamp = new Date().toLocaleTimeString();
-            logs.value += `[${timestamp}] ${message}\n`;
-            logs.scrollTop = logs.scrollHeight;
-            console.log(message);
-        }
+        statusDiv.innerHTML = `
+          <p>${backendStatus}</p>
+          <p>🌐 Servidor Web: ✅ OK</p>
+        `;
+      } catch (error) {
+        statusDiv.innerHTML = `
+          <p>❌ Backend: Não responde</p>
+          <p>🌐 Servidor Web: ✅ OK</p>
+        `;
+      }
+    }
 
-        async function testHealth() {
-            const resultDiv = document.getElementById('healthResult');
-            resultDiv.style.display = 'block';
-
-            try {
-                log('Testando health check...');
-                const response = await fetch('http://localhost:3000/health');
-                const data = await response.json();
-
-                resultDiv.className = 'result success';
-                resultDiv.textContent = `✅ Sucesso: ${JSON.stringify(data, null, 2)}`;
-                log('Health check OK');
-            } catch (error) {
-                resultDiv.className = 'result error';
-                resultDiv.textContent = `❌ Erro: ${error.message}`;
-                log(`Health check falhou: ${error.message}`);
-            }
-        }
-
-        async function testAvailableSlots() {
-            const date = document.getElementById('testDate').value;
-            const resultDiv = document.getElementById('slotsResult');
-            resultDiv.style.display = 'block';
-
-            try {
-                log(`Buscando horários disponíveis para ${date}...`);
-                const response = await fetch(`http://localhost:3000/api/appointments/available/${date}?duration=60`);
-                const data = await response.json();
-
-                resultDiv.className = 'result success';
-                resultDiv.textContent = `✅ Sucesso: ${JSON.stringify(data, null, 2)}`;
-                log(`Horários encontrados: ${data.data.available_slots.length}`);
-            } catch (error) {
-                resultDiv.className = 'result error';
-                resultDiv.textContent = `❌ Erro: ${error.message}`;
-                log(`Erro ao buscar horários: ${error.message}`);
-            }
-        }
-
-        async function testCreateAppointment() {
-            const resultDiv = document.getElementById('createResult');
-            resultDiv.style.display = 'block';
-
-            // Gerar dados únicos baseados no timestamp
-            const timestamp = Date.now();
-            const uniqueId = timestamp.toString().slice(-4);
-            const now = new Date();
-
-            // Gerar horário único (evitar conflitos)
-            const minutesSinceMidnight = Math.floor((timestamp / 1000 / 60) % (24 * 60));
-            const hours = Math.floor(minutesSinceMidnight / 60);
-            const minutes = minutesSinceMidnight % 60;
-            // Garantir horário comercial (8h às 17h)
-            const businessHours = Math.max(8, Math.min(17, hours));
-            const businessMinutes = minutes < 30 ? 0 : 30; // Apenas meia hora em meia hora
-            const uniqueTime = `${String(businessHours).padStart(2, '0')}:${String(businessMinutes).padStart(2, '0')}`;
-
-            const appointmentData = {
-                customer_name: `João Teste ${uniqueId}`,
-                customer_phone: document.getElementById('customerPhone').value,
-                appointment_date: document.getElementById('appointmentDate').value,
-                appointment_time: uniqueTime,
-                duration_minutes: 60,
-                notes: `Teste via página de debug - ${now.toLocaleString()}`
-            };
-
-            try {
-                // Limpar agendamentos antigos antes de criar novo
-                await cleanupTestAppointments();
-
-                log('Criando agendamento...');
-                log(`Dados únicos: ${JSON.stringify(appointmentData)}`);
-
-                const response = await fetch('http://localhost:3000/api/appointments', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(appointmentData)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    resultDiv.className = 'result success';
-                    resultDiv.textContent = `✅ Agendamento criado!\nID: ${data.data.id}\nCliente: ${appointmentData.customer_name}\nData: ${appointmentData.appointment_date} ${appointmentData.appointment_time}`;
-                    log('Agendamento criado com sucesso');
-                } else {
-                    resultDiv.className = 'result error';
-
-                    let errorMessage = `❌ Erro ${response.status}: ${data.message || data.error || 'Erro desconhecido'}`;
-
-                    // Adicionar orientações específicas
-                    if (data.message && data.message.includes('Horário indisponível')) {
-                        errorMessage += '\n\n💡 Este horário já está ocupado. Clique novamente para gerar um horário diferente.';
-                    } else if (data.message && data.message.includes('Data do agendamento não pode ser no passado')) {
-                        errorMessage += '\n\n📅 A data deve ser hoje ou no futuro. Verifique o campo de data.';
-                    } else if (data.message && data.message.includes('Dados inválidos')) {
-                        errorMessage += '\n\n📝 Verifique se todos os campos obrigatórios estão preenchidos corretamente.';
-                    }
-
-                    resultDiv.textContent = errorMessage;
-                    log(`Erro ${response.status}: ${data.message}`);
-                }
-            } catch (error) {
-                resultDiv.className = 'result error';
-                resultDiv.textContent = `❌ Erro de rede: ${error.message}`;
-                log(`Erro de rede: ${error.message}`);
-            }
-        }
-
-        // Configurar datas dinâmicas
-        function setupDynamicDates() {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const futureDate = tomorrow.toISOString().split('T')[0];
-
-            // Definir datas futuras nos campos
-            document.getElementById('testDate').value = futureDate;
-            document.getElementById('appointmentDate').value = futureDate;
-
-            log(`📅 Datas configuradas para amanhã: ${futureDate}`);
-        }
-
-        // Limpar agendamentos de teste
-        async function cleanupTestAppointments() {
-            try {
-                log('🧹 Limpando agendamentos de teste anteriores...');
-
-                // Buscar agendamentos de hoje e amanhã
-                const dates = [new Date().toISOString().split('T')[0], document.getElementById('appointmentDate').value];
-
-                for (const date of dates) {
-                    try {
-                        const response = await fetch(`http://localhost:3000/api/appointments?date=${date}`);
-                        if (response.ok) {
-                            const data = await response.json();
-                            const testAppointments = data.data.filter(apt =>
-                                apt.notes && apt.notes.includes('Teste via página de debug')
-                            );
-
-                            for (const appointment of testAppointments) {
-                                log(`🗑️ Removendo agendamento de teste: ${appointment.id}`);
-                                await fetch(`http://localhost:3000/api/appointments/${appointment.id}`, {
-                                    method: 'DELETE'
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        log(`⚠️ Erro ao limpar agendamentos da data ${date}: ${error.message}`);
-                    }
-                }
-
-                log('✅ Limpeza concluída');
-            } catch (error) {
-                log(`❌ Erro na limpeza: ${error.message}`);
-            }
-        }
-
-        // Teste automático ao carregar
-        window.onload = function() {
-            log('🚀 Teste simples iniciado');
-            setupDynamicDates();
-            log('💡 Clique nos botões para testar cada funcionalidade');
-            setTimeout(() => {
-                testHealth();
-            }, 1000);
-        };
-    </script>
+    testConnection();
+  </script>
 </body>
 </html>

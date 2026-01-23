@@ -34,7 +34,10 @@ class APIClient {
 
             return data;
         } catch (error) {
-            console.error(`Erro na requisição ${config.method || 'GET'} ${url}:`, error);
+            // Log apenas se não for erro de CORS (comum em desenvolvimento)
+            if (!error.message.includes('Failed to fetch') && !error.message.includes('CORS')) {
+                console.error(`Erro na requisição ${config.method || 'GET'} ${url}:`, error);
+            }
             throw error;
         }
     }

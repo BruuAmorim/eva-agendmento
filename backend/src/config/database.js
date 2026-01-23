@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const SeedService = require('../services/seedService');
 
 // Configuração da conexão com PostgreSQL
 const pool = new Pool({
@@ -42,6 +43,24 @@ async function connectDB() {
 // Função para criar tabelas
 async function createTables(client) {
   try {
+    // Tabela de usuários
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin_master', 'user')),
+        name VARCHAR(255) NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Índice para email
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+    `);
+
     // Tabela de agendamentos
     await client.query(`
       CREATE TABLE IF NOT EXISTS appointments (
@@ -67,6 +86,10 @@ async function createTables(client) {
     `);
 
     console.log('📋 Tabelas criadas/verficadas com sucesso');
+
+    // Criar usuários de teste
+    await SeedService.ensureSeedUsers();
+
   } catch (error) {
     console.error('❌ Erro ao criar tabelas:', error);
     throw error;
