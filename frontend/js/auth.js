@@ -3,6 +3,8 @@ class AuthManager {
     constructor() {
         this.currentUser = null;
         this.token = null;
+        // Backend API (porta 3000). Mantemos explícito para evitar chamar o servidor estático (8080).
+        this.apiBaseUrl = 'http://localhost:3000';
         this.init();
     }
 
@@ -186,7 +188,7 @@ class AuthManager {
         this.setLoading(true);
 
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(`${this.apiBaseUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -305,6 +307,11 @@ class AuthManager {
 
     // Fazer requisições autenticadas para a API
     async apiRequest(endpoint, options = {}) {
+        // Permitir passar endpoint absoluto (http/https). Caso contrário, prefixar com base do backend.
+        const url = (typeof endpoint === 'string' && /^https?:\/\//.test(endpoint))
+            ? endpoint
+            : `${this.apiBaseUrl}${endpoint}`;
+
         const defaultOptions = {
             headers: {
                 'Content-Type': 'application/json',
@@ -316,14 +323,24 @@ class AuthManager {
             defaultOptions.headers.Authorization = `Bearer ${this.token}`;
         }
 
-        const response = await fetch(endpoint, { ...defaultOptions, ...options });
-        const data = await response.json();
+        const response = await fetch(url, { ...defaultOptions, ...options });
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (e) {
+            // Se o backend estiver indisponível ou responder HTML, manter um payload padrão
+            data = { success: false, message: 'Resposta inválida do servidor' };
+        }
 
-        if (response.status === 401) {
-            // Token inválido/expirado
-            this.clearAuth();
-            this.updateUIForAuthStatus();
-            throw new Error('Token expirado');
+        // IMPORTANTE:
+        // - 401/403 NÃO devem "deslogar" automaticamente (requisito).
+        // - Exceção: verificação de sessão (/api/auth/verify) pode limpar auth se token falhar.
+        if (response.status === 401 || response.status === 403) {
+            if (endpoint === '/api/auth/verify') {
+                this.clearAuth();
+                this.updateUIForAuthStatus();
+            }
+            throw new Error(data?.message || (response.status === 401 ? 'Não autenticado' : 'Acesso negado'));
         }
 
         return data;

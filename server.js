@@ -10,6 +10,8 @@ const SeedService = require('./backend/src/services/seedService');
 const appointmentRoutes = require('./backend/src/routes/appointments');
 const authRoutes = require('./backend/src/routes/authRoutes');
 const userRoutes = require('./backend/src/routes/userRoutes');
+const integrationRoutes = require('./backend/src/routes/integrationRoutes');
+const n8nRoutes = require('./backend/src/routes/n8nRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,6 +72,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/integrations', integrationRoutes);
+app.use('/api/n8n', n8nRoutes);
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {

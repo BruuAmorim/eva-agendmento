@@ -215,3 +215,4 @@ Para dúvidas ou problemas, verifique:
 2. Console do navegador (F12)
 3. Arquivo `database.sqlite` para dados
 4. Documentação das APIs
+

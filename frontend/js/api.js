@@ -29,11 +29,19 @@ class APIClient {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || `Erro HTTP: ${response.status}`);
+                // Criar erro com informações completas da resposta
+                const error = new Error(data.message || data.error || `Erro HTTP: ${response.status}`);
+                error.response = response;
+                error.data = data;
+                throw error;
             }
 
             return data;
         } catch (error) {
+            // Se já é um erro criado acima, apenas relançar
+            if (error.response) {
+                throw error;
+            }
             // Log apenas se não for erro de CORS (comum em desenvolvimento)
             if (!error.message.includes('Failed to fetch') && !error.message.includes('CORS')) {
                 console.error(`Erro na requisição ${config.method || 'GET'} ${url}:`, error);

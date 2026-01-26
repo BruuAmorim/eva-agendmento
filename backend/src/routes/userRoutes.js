@@ -13,7 +13,8 @@ router.get('/', UserController.getAllUsers);
 router.get('/:id', UserController.getUserById);
 router.post('/', UserController.createUser);
 router.put('/:id', UserController.updateUser);
-router.delete('/:id', UserController.deleteUser);
+router.delete('/:id', UserController.deleteUser); // Exclusão permanente
+router.patch('/:id/deactivate', UserController.deactivateUser); // Desativar (soft delete)
 router.patch('/:id/reactivate', UserController.reactivateUser);
 
 module.exports = router;

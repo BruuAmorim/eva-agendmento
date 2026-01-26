@@ -20,3 +20,4 @@ router.post('/refresh', verifyToken, AuthController.refreshToken);
 router.get('/profile', verifyToken, AuthController.getProfile);
 
 module.exports = router;
+

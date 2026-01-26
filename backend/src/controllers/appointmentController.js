@@ -1,4 +1,5 @@
 const Appointment = require('../models/Appointment');
+const WebhookService = require('../services/webhookService');
 
 // Controller para operações de agendamento
 class AppointmentController {
@@ -132,6 +133,11 @@ class AppointmentController {
 
       const appointment = await Appointment.create(appointmentData);
 
+      // Disparar webhook para n8n (assíncrono, não bloqueia a resposta)
+      WebhookService.onAppointmentCreated(appointment).catch(err => {
+        console.error('Erro ao disparar webhook de criação:', err);
+      });
+
       res.status(201).json({
         success: true,
         message: 'Agendamento criado com sucesso',
@@ -174,6 +180,11 @@ class AppointmentController {
       }
 
       const updatedAppointment = await appointment.update(updateData);
+
+      // Disparar webhook para n8n (assíncrono, não bloqueia a resposta)
+      WebhookService.onAppointmentUpdated(updatedAppointment).catch(err => {
+        console.error('Erro ao disparar webhook de atualização:', err);
+      });
 
       res.json({
         success: true,
@@ -225,6 +236,11 @@ class AppointmentController {
 
       const cancelledAppointment = await appointment.cancel(reason);
 
+      // Disparar webhook para n8n (assíncrono, não bloqueia a resposta)
+      WebhookService.onAppointmentCancelled(cancelledAppointment).catch(err => {
+        console.error('Erro ao disparar webhook de cancelamento:', err);
+      });
+
       res.json({
         success: true,
         message: 'Agendamento cancelado com sucesso',
@@ -255,7 +271,13 @@ class AppointmentController {
         });
       }
 
+      const appointmentId = appointment.id;
       await appointment.delete();
+
+      // Disparar webhook para n8n (assíncrono, não bloqueia a resposta)
+      WebhookService.onAppointmentDeleted(appointmentId).catch(err => {
+        console.error('Erro ao disparar webhook de exclusão:', err);
+      });
 
       res.json({
         success: true,

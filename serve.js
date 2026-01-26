@@ -12,6 +12,24 @@ app.get('/', (req, res) => {
 });
 
 // Rota específica para admin (redirecionamento)
+app.get('/admin/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'admin', 'dashboard.html'));
+});
+
+app.get('/admin/users', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'admin', 'users.html'));
+});
+
+app.get('/admin/integrations', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'admin', 'integrations.html'));
+});
+
+// Página inexistente hoje (mantém navegação sem "quebrar")
+app.get('/admin/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'admin', 'dashboard.html'));
+});
+
+// Fallback: manter /admin/* no dashboard para rotas ainda não implementadas
 app.get('/admin/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'admin', 'dashboard.html'));
 });

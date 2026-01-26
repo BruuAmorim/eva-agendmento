@@ -558,6 +558,9 @@
                     ✅ Reativar
                   </button>`
                 }
+                <button class="user-action-btn btn-delete" onclick="userManagement.deleteUser(${user.id})" style="background: #dc3545; color: white;">
+                  🗑️ Excluir
+                </button>
               </div>
             </td>
           </tr>
@@ -678,8 +681,8 @@
 
       async toggleUserStatus(userId, activate) {
         try {
-          const endpoint = activate ? `/api/users/${userId}/reactivate` : `/api/users/${userId}`;
-          const method = activate ? 'PATCH' : 'DELETE';
+          const endpoint = activate ? `/api/users/${userId}/reactivate` : `/api/users/${userId}/deactivate`;
+          const method = 'PATCH';
 
           const response = await window.authManager.apiRequest(endpoint, { method });
 
@@ -692,6 +695,28 @@
         } catch (error) {
           console.error('Erro ao alterar status do usuário:', error);
           this.showToast('Erro ao alterar status do usuário', 'error');
+        }
+      }
+
+      async deleteUser(userId) {
+        if (!confirm('⚠️ ATENÇÃO: Esta ação é PERMANENTE e não pode ser desfeita!\n\nTem certeza que deseja EXCLUIR este usuário do banco de dados?')) {
+          return;
+        }
+
+        try {
+          const response = await window.authManager.apiRequest(`/api/users/${userId}`, {
+            method: 'DELETE'
+          });
+
+          if (response.success) {
+            this.showToast('Usuário excluído permanentemente!', 'success');
+            this.loadUsers();
+          } else {
+            this.showToast(response.message || 'Erro ao excluir usuário', 'error');
+          }
+        } catch (error) {
+          console.error('Erro ao excluir usuário:', error);
+          this.showToast('Erro ao excluir usuário', 'error');
         }
       }
 

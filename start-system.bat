@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 echo ========================================
 echo   EvAgendamento - Sistema SaaS
 echo ========================================
@@ -7,12 +8,12 @@ echo Iniciando sistema completo...
 echo.
 
 echo [1/2] Iniciando Backend API...
-start "Backend API" cmd /k "node server.js"
+start "Backend API" cmd /k "cd /d %~dp0 && node server.js"
 
 timeout /t 3 /nobreak > nul
 
 echo [2/2] Iniciando Servidor Web...
-start "Frontend Server" cmd /k "node serve.js"
+start "Frontend Server" cmd /k "cd /d %~dp0 && node serve.js"
 
 echo.
 echo ========================================

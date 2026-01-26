@@ -38,12 +38,15 @@ class Appointment {
     if (!data.appointment_date) {
       errors.push('Data do agendamento é obrigatória');
     } else {
-      const appointmentDate = new Date(data.appointment_date);
+      const appointmentDate = new Date(data.appointment_date + 'T00:00:00'); // Força horário 00:00
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Permitir agendamentos para hoje ou datas futuras
-      if (appointmentDate < today) {
+      // Comparar apenas AAAA-MM-DD (ignorar horário)
+      const appointmentDateStr = appointmentDate.toISOString().split('T')[0];
+      const todayStr = today.toISOString().split('T')[0];
+
+      if (appointmentDateStr < todayStr) {
         errors.push('Data do agendamento não pode ser no passado');
       }
     }
@@ -76,13 +79,26 @@ class Appointment {
       throw new Error(`Dados inválidos: ${validationErrors.join(', ')}`);
     }
 
+    // Normalizar data/hora para evitar conflitos falsos por formatação
+    const normalizedDate = this.normalizeDate(data.appointment_date);
+    const normalizedTime = this.normalizeTime(data.appointment_time);
+
     // Verificar conflito de horário
-    const conflict = await this.checkTimeConflict(data.appointment_date, data.appointment_time, data.duration_minutes);
+    const conflict = await this.checkTimeConflict(
+      normalizedDate,
+      normalizedTime,
+      data.duration_minutes,
+      null // excludeId
+    );
     if (conflict) {
       throw new Error('Horário indisponível - conflito com outro agendamento');
     }
 
-    const appointment = new Appointment(data);
+    const appointment = new Appointment({
+      ...data,
+      appointment_date: normalizedDate,
+      appointment_time: normalizedTime
+    });
 
     if (useMemoryStorage()) {
       // Usar armazenamento em memória
@@ -281,18 +297,26 @@ class Appointment {
   }
 
   // Verificar conflito de horário
-  static async checkTimeConflict(date, time, duration = 60) {
+  static async checkTimeConflict(date, time, duration = 60, excludeId = null) {
     if (useMemoryStorage()) {
       // Usar armazenamento em memória
-      const timeMinutes = this.timeToMinutes(time);
-      const endTimeMinutes = timeMinutes + duration;
+      const normalizedDate = this.normalizeDate(date);
+      const normalizedTime = this.normalizeTime(time);
+
+      const timeMinutes = this.timeToMinutes(normalizedTime);
+      const endTimeMinutes = timeMinutes + (duration || 60);
 
       const conflicts = memoryStorage.filter(apt => {
-        if (apt.appointment_date !== date || apt.status === 'cancelled' || apt.id === this?.id) {
-          return false;
-        }
+        // Considerar apenas agendamentos "ativos" para conflito
+        // (cancelled não conflita; demais status conflitam por padrão)
+        if (apt.status === 'cancelled') return false;
 
-        const aptTimeMinutes = this.timeToMinutes(apt.appointment_time);
+        if (excludeId && apt.id === excludeId) return false;
+
+        const aptDate = this.normalizeDate(apt.appointment_date);
+        if (aptDate !== normalizedDate) return false;
+
+        const aptTimeMinutes = this.timeToMinutes(this.normalizeTime(apt.appointment_time));
         const aptEndTimeMinutes = aptTimeMinutes + apt.duration_minutes;
 
         // Verificar sobreposição
@@ -308,12 +332,14 @@ class Appointment {
         WHERE appointment_date = $1
           AND status != 'cancelled'
           AND (
-            (appointment_time <= $2 AND appointment_time + INTERVAL '${duration} minutes' > $2) OR
-            ($2 <= appointment_time AND $2 + INTERVAL '${duration} minutes' > appointment_time)
+            (appointment_time::time <= $2::time AND (appointment_time::time + (duration_minutes || ' minutes')::interval) > $2::time) OR
+            ($2::time <= appointment_time::time AND ($2::time + ($3 || ' minutes')::interval) > appointment_time::time)
           )
       `;
 
-      const result = await query(queryText, [date, time]);
+      console.log('🔍 Verificando conflitos para:', { date, time, duration });
+      const result = await query(queryText, [date, time, duration]);
+      console.log('📊 Agendamentos encontrados:', result.rows[0].conflict_count);
       return parseInt(result.rows[0].conflict_count) > 0;
     }
   }
@@ -330,18 +356,22 @@ class Appointment {
         (data.appointment_time && data.appointment_time !== this.appointment_time) ||
         (data.duration_minutes && data.duration_minutes !== this.duration_minutes)) {
 
-      const newDate = data.appointment_date || this.appointment_date;
-      const newTime = data.appointment_time || this.appointment_time;
+      const newDate = Appointment.normalizeDate(data.appointment_date || this.appointment_date);
+      const newTime = Appointment.normalizeTime(data.appointment_time || this.appointment_time);
       const newDuration = data.duration_minutes || this.duration_minutes;
 
-      const conflict = await Appointment.checkTimeConflict(newDate, newTime, newDuration);
+      const conflict = await Appointment.checkTimeConflict(newDate, newTime, newDuration, this.id);
       if (conflict) {
         throw new Error('Novo horário indisponível - conflito com outro agendamento');
       }
     }
 
     // Atualizar campos
-    Object.assign(this, data, { updated_at: new Date() });
+    const nextData = { ...data };
+    if (nextData.appointment_date) nextData.appointment_date = Appointment.normalizeDate(nextData.appointment_date);
+    if (nextData.appointment_time) nextData.appointment_time = Appointment.normalizeTime(nextData.appointment_time);
+
+    Object.assign(this, nextData, { updated_at: new Date() });
 
     if (useMemoryStorage()) {
       // Usar armazenamento em memória
@@ -442,6 +472,37 @@ class Appointment {
   static timeToMinutes(timeString) {
     const [hours, minutes] = timeString.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  // Normalizar data em YYYY-MM-DD
+  static normalizeDate(value) {
+    if (!value) return value;
+
+    // Se já está em YYYY-MM-DD, manter
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value;
+    }
+
+    // Aceitar ISO (YYYY-MM-DDTHH:mm...) e Date
+    const d = (value instanceof Date) ? value : new Date(value);
+    if (isNaN(d.getTime())) return value;
+
+    // Usar UTC para evitar deslocamento de fuso ao serializar
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Normalizar hora em HH:MM
+  static normalizeTime(value) {
+    if (!value) return value;
+    if (typeof value !== 'string') return value;
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return value;
+    const hh = String(parseInt(match[1], 10)).padStart(2, '0');
+    const mm = match[2];
+    return `${hh}:${mm}`;
   }
 
   // Converter minutos para tempo

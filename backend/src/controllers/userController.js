@@ -201,7 +201,7 @@ class UserController {
   }
 
   /**
-   * Deletar usuário (soft delete - desativar)
+   * Deletar usuário (exclusão permanente do banco)
    */
   static async deleteUser(req, res) {
     try {
@@ -219,6 +219,46 @@ class UserController {
       if (user.role === 'admin_master' && req.user.id === parseInt(id)) {
         return res.status(400).json({
           error: 'Operação não permitida',
+          message: 'Não é possível excluir sua própria conta de administrador'
+        });
+      }
+
+      // Exclusão permanente do banco de dados
+      await user.destroy();
+
+      res.json({
+        success: true,
+        message: 'Usuário excluído permanentemente com sucesso'
+      });
+
+    } catch (error) {
+      console.error('Erro ao deletar usuário:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: 'Erro ao deletar usuário'
+      });
+    }
+  }
+
+  /**
+   * Desativar usuário (soft delete)
+   */
+  static async deactivateUser(req, res) {
+    try {
+      const { id } = req.params;
+
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({
+          error: 'Usuário não encontrado',
+          message: 'Usuário não existe'
+        });
+      }
+
+      // Impedir que admin_master seja desativado por si mesmo
+      if (user.role === 'admin_master' && req.user.id === parseInt(id)) {
+        return res.status(400).json({
+          error: 'Operação não permitida',
           message: 'Não é possível desativar sua própria conta de administrador'
         });
       }
@@ -232,10 +272,10 @@ class UserController {
       });
 
     } catch (error) {
-      console.error('Erro ao deletar usuário:', error);
+      console.error('Erro ao desativar usuário:', error);
       res.status(500).json({
         error: 'Erro interno do servidor',
-        message: 'Erro ao deletar usuário'
+        message: 'Erro ao desativar usuário'
       });
     }
   }

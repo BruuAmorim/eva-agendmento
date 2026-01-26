@@ -1,6 +1,7 @@
 const { Sequelize } = require('sequelize');
 const User = require('./User');
 const Appointment = require('./Appointment');
+const Integration = require('./Integration');
 
 // Configuração do Sequelize (SQLite para desenvolvimento)
 const sequelize = new Sequelize({
@@ -18,6 +19,7 @@ const sequelize = new Sequelize({
 // Inicializar modelos
 const UserModel = User(sequelize);
 const AppointmentModel = Appointment;
+const IntegrationModel = Integration(sequelize);
 
 // Testar conexão e sincronizar
 async function initializeDatabase() {
@@ -39,5 +41,6 @@ module.exports = {
   sequelize,
   User: UserModel,
   Appointment: AppointmentModel,
+  Integration: IntegrationModel,
   initializeDatabase
 };

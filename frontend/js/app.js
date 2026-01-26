@@ -215,6 +215,13 @@ class EvAgendamento {
         }
 
         try {
+            // Garantir que os agendamentos do dia estejam carregados antes de calcular disponibilidade
+            const filterDateEl = document.getElementById('filterDate');
+            if (filterDateEl && filterDateEl.value !== date) {
+                filterDateEl.value = date; // YYYY-MM-DD
+                await this.loadAppointments();
+            }
+
             // Gerar horários disponíveis (8h às 18h, intervalos de 1 hora)
             const availableSlots = this.generateAvailableSlots(date);
             this.availableSlots = availableSlots;
@@ -365,18 +372,35 @@ class EvAgendamento {
         try {
             const response = await API.createAppointment(appointmentData);
 
-            this.showToast('Agendamento criado com sucesso!', 'success');
-            this.resetAppointmentForm();
+            // Verificar se a resposta indica sucesso
+            if (response && response.success) {
+                this.showToast('Agendamento criado com sucesso!', 'success');
+                this.resetAppointmentForm();
 
-            // Recarregar agendamentos se uma data estiver selecionada
-            const filterDate = document.getElementById('filterDate').value;
-            if (filterDate) {
+                // Garantir atualização da lista após criar:
+                // - padroniza o filtro de data para a mesma data criada
+                // - recarrega a lista sempre
+                const filterDateEl = document.getElementById('filterDate');
+                if (filterDateEl && appointmentData.appointment_date) {
+                    filterDateEl.value = appointmentData.appointment_date; // YYYY-MM-DD
+                }
                 await this.loadAppointments();
+            } else {
+                // Se não foi sucesso, mostrar mensagem de erro
+                const errorMsg = response?.message || response?.error || 'Erro ao criar agendamento';
+                this.showToast(errorMsg, 'error');
             }
 
         } catch (error) {
             console.error('Erro ao criar agendamento:', error);
-            this.showToast(error.message || 'Erro ao criar agendamento', 'error');
+            // Extrair mensagem de erro da resposta se disponível
+            let errorMessage = 'Erro ao criar agendamento';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            }
+            this.showToast(errorMessage, 'error');
         }
     }
 
@@ -758,7 +782,13 @@ class EvAgendamento {
     }
 
     async saveEditAppointment() {
-        if (!this.selectedAppointment) return;
+        const form = document.getElementById('editAppointmentForm');
+        const appointmentId = form?.dataset.appointmentId;
+
+        if (!appointmentId) {
+            this.showToast('Erro: ID do agendamento não encontrado', 'error');
+            return;
+        }
 
         const updateData = {
             customer_name: document.getElementById('editCustomerName').value,
@@ -769,10 +799,24 @@ class EvAgendamento {
         };
 
         try {
-            await API.updateAppointment(this.selectedAppointment.id, updateData);
-            this.showToast('Agendamento atualizado com sucesso!', 'success');
-            this.closeEditModal();
-            await this.loadAppointments();
+            const response = await fetch(`http://localhost:3000/api/appointments/${appointmentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (response.ok) {
+                this.showToast('Agendamento atualizado com sucesso!', 'success');
+                this.closeEditModal();
+                // Atualizar lista em tempo real
+                await this.loadAppointments();
+            } else {
+                const errorData = await response.json();
+                this.showToast(errorData.message || 'Erro ao atualizar agendamento', 'error');
+            }
         } catch (error) {
             console.error('Erro ao atualizar agendamento:', error);
             this.showToast('Erro ao atualizar agendamento', 'error');
