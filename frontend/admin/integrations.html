@@ -183,6 +183,37 @@
 
   <!-- Main Content -->
   <main class="integrations-main">
+    <!-- URL Base da API -->
+    <div class="integration-card">
+      <h2>🌐 URL Base da API</h2>
+      <p style="color: var(--muted); margin-bottom: 15px;">
+        Use esta URL como referência para configurar integrações externas (n8n, webhooks, etc.).
+      </p>
+
+      <div class="form-group">
+        <label>URL Base da API EvAgendamento</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="text" id="apiBaseUrl" readonly style="flex: 1; background: var(--background); border: 1px solid var(--border);">
+          <button type="button" class="btn-test" id="copyApiUrlBtn" style="padding: 8px 12px; font-size: 14px;">📋 Copiar</button>
+        </div>
+        <div class="help-text">
+          Esta é a URL base oficial da API para integrações externas
+        </div>
+      </div>
+
+      <!-- Endpoints Principais -->
+      <div style="margin-top: 20px;">
+        <h4 style="color: var(--text); margin-bottom: 10px;">📋 Endpoints Principais:</h4>
+        <div style="background: var(--background); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div><strong>GET</strong> /api/appointments/available/:date - Horários disponíveis</div>
+          <div><strong>POST</strong> /api/appointments - Criar agendamento</div>
+          <div><strong>PUT</strong> /api/appointments/:id - Atualizar agendamento</div>
+          <div><strong>DELETE</strong> /api/appointments/:id - Excluir agendamento</div>
+          <div><strong>GET</strong> /api/health - Status da API</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Integração n8n -->
     <div class="integration-card">
       <h2>🔗 Integração n8n</h2>
@@ -249,6 +280,7 @@
       init() {
         this.checkAdminAccess();
         this.bindEvents();
+        this.loadApiBaseUrl();
         this.loadIntegration();
       }
 
@@ -271,14 +303,40 @@
         if (testBtn) {
           testBtn.addEventListener('click', () => this.testWebhook());
         }
+
+        // Botão de cópia da URL da API
+        const copyBtn = document.getElementById('copyApiUrlBtn');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', () => this.copyApiUrl());
+        }
       }
 
-      async loadIntegration() {
+      async       async loadApiBaseUrl() {
+        try {
+          // Buscar informações da API para obter a URL base
+          const response = await window.authManager.apiRequest('/api/health');
+          if (response.success) {
+            const apiBaseUrlInput = document.getElementById('apiBaseUrl');
+            if (apiBaseUrlInput) {
+              apiBaseUrlInput.value = response.baseUrl || 'http://localhost:3000/api';
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao carregar URL base da API:', error);
+          // Fallback para URL padrão
+          const apiBaseUrlInput = document.getElementById('apiBaseUrl');
+          if (apiBaseUrlInput) {
+            apiBaseUrlInput.value = 'http://localhost:3000/api';
+          }
+        }
+      }
+
+      loadIntegration() {
         try {
           const response = await window.authManager.apiRequest('/api/integrations');
           if (response.success && response.integration) {
             const integration = response.integration;
-            
+
             document.getElementById('webhookUrl').value = integration.webhookUrl || '';
             document.getElementById('isActive').checked = integration.isActive || false;
             this.updateStatusIndicator();
@@ -321,6 +379,22 @@
         } catch (error) {
           console.error('Erro ao salvar integração:', error);
           this.showToast('Erro ao salvar configuração', 'error');
+        }
+      }
+
+      copyApiUrl() {
+        const apiUrlInput = document.getElementById('apiBaseUrl');
+        if (apiUrlInput) {
+          apiUrlInput.select();
+          apiUrlInput.setSelectionRange(0, 99999); // Para dispositivos móveis
+
+          try {
+            document.execCommand('copy');
+            this.showToast('URL da API copiada para a área de transferência!', 'success');
+          } catch (error) {
+            console.error('Erro ao copiar URL:', error);
+            this.showToast('Erro ao copiar URL. Selecione e copie manualmente.', 'error');
+          }
         }
       }
 

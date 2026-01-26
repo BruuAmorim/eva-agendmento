@@ -21,3 +21,5 @@ router.get('/profile', verifyToken, AuthController.getProfile);
 
 module.exports = router;
 
+
+

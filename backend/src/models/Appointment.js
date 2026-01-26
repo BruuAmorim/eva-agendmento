@@ -6,7 +6,7 @@ let memoryStorage = [];
 
 // Verificar se deve usar armazenamento em memória
 const useMemoryStorage = () => {
-  // Forçar uso de memória para desenvolvimento
+  // Usar armazenamento em memória para desenvolvimento
   return true;
 };
 
@@ -303,27 +303,30 @@ class Appointment {
       const normalizedDate = this.normalizeDate(date);
       const normalizedTime = this.normalizeTime(time);
 
+      // Filtrar agendamentos da mesma data e que não estão cancelados
+      const sameDateAppointments = memoryStorage.filter(apt => {
+        if (apt.status === 'cancelled') return false;
+        if (excludeId && apt.id === excludeId) return false;
+        const aptDate = this.normalizeDate(apt.appointment_date);
+        return aptDate === normalizedDate;
+      });
+
+      // Verificar conflitos
       const timeMinutes = this.timeToMinutes(normalizedTime);
       const endTimeMinutes = timeMinutes + (duration || 60);
 
-      const conflicts = memoryStorage.filter(apt => {
-        // Considerar apenas agendamentos "ativos" para conflito
-        // (cancelled não conflita; demais status conflitam por padrão)
-        if (apt.status === 'cancelled') return false;
-
-        if (excludeId && apt.id === excludeId) return false;
-
-        const aptDate = this.normalizeDate(apt.appointment_date);
-        if (aptDate !== normalizedDate) return false;
-
+      for (const apt of sameDateAppointments) {
         const aptTimeMinutes = this.timeToMinutes(this.normalizeTime(apt.appointment_time));
-        const aptEndTimeMinutes = aptTimeMinutes + apt.duration_minutes;
+        const aptEndTimeMinutes = aptTimeMinutes + (apt.duration_minutes || 60);
 
-        // Verificar sobreposição
-        return (timeMinutes < aptEndTimeMinutes && endTimeMinutes > aptTimeMinutes);
-      });
+        // Verificar sobreposição: dois intervalos se sobrepõem se
+        // início1 < fim2 E fim1 > início2
+        if (timeMinutes < aptEndTimeMinutes && endTimeMinutes > aptTimeMinutes) {
+          return true;
+        }
+      }
 
-      return conflicts.length > 0;
+      return false;
     } else {
       // Usar PostgreSQL
       const queryText = `
@@ -331,16 +334,19 @@ class Appointment {
         FROM appointments
         WHERE appointment_date = $1
           AND status != 'cancelled'
+          AND id != $4
           AND (
             (appointment_time::time <= $2::time AND (appointment_time::time + (duration_minutes || ' minutes')::interval) > $2::time) OR
             ($2::time <= appointment_time::time AND ($2::time + ($3 || ' minutes')::interval) > appointment_time::time)
           )
       `;
 
-      console.log('🔍 Verificando conflitos para:', { date, time, duration });
-      const result = await query(queryText, [date, time, duration]);
-      console.log('📊 Agendamentos encontrados:', result.rows[0].conflict_count);
-      return parseInt(result.rows[0].conflict_count) > 0;
+      const params = [date, time, duration, excludeId || null];
+      console.log('🔍 Verificando conflitos no banco:', { date, time, duration, excludeId });
+      const result = await query(queryText, params);
+      const conflictCount = parseInt(result.rows[0].conflict_count);
+      console.log('📊 Conflitos encontrados no banco:', conflictCount);
+      return conflictCount > 0;
     }
   }
 

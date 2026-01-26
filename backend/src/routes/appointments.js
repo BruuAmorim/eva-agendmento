@@ -1,3 +1,12 @@
+/**
+ * Rotas de Agendamentos - EvAgendamento API
+ *
+ * Endpoints principais para gerenciamento de agendamentos.
+ * Estes endpoints são utilizados por integrações externas (n8n).
+ *
+ * @apiDefine AppointmentsEndpoints
+ */
+
 const express = require('express');
 const router = express.Router();
 const appointmentController = require('../controllers/appointmentController');
@@ -46,21 +55,56 @@ router.get('/', appointmentController.getAppointments);
 router.get('/stats/overview', appointmentController.getAppointmentStats);
 
 // GET /api/appointments/available/:date - Horários disponíveis para uma data
+// @api {get} /appointments/available/:date Buscar horários disponíveis
+// @apiName GetAvailableSlots
+// @apiGroup Appointments
+// @apiParam {String} date Data no formato YYYY-MM-DD
+// @apiParam {Number} [duration=60] Duração em minutos
+// @apiSuccess {Object[]} slots Lista de horários disponíveis
 router.get('/available/:date', appointmentController.getAvailableSlots);
 
 // GET /api/appointments/:id - Buscar agendamento específico
+// @api {get} /appointments/:id Buscar agendamento por ID
+// @apiName GetAppointment
+// @apiGroup Appointments
+// @apiParam {String} id ID do agendamento
 router.get('/:id', appointmentController.getAppointmentById);
 
 // POST /api/appointments - Criar novo agendamento
+// @api {post} /appointments Criar agendamento
+// @apiName CreateAppointment
+// @apiGroup Appointments
+// @apiParam {String} customer_name Nome do cliente
+// @apiParam {String} customer_email Email do cliente
+// @apiParam {String} customer_phone Telefone do cliente
+// @apiParam {String} appointment_date Data (YYYY-MM-DD)
+// @apiParam {String} appointment_time Horário (HH:MM)
+// @apiParam {Number} [duration_minutes=60] Duração em minutos
+// @apiParam {String} [notes] Observações
 router.post('/', validateAppointment, appointmentController.createAppointment);
 
 // PUT /api/appointments/:id - Atualizar agendamento
+// @api {put} /appointments/:id Atualizar agendamento
+// @apiName UpdateAppointment
+// @apiGroup Appointments
+// @apiParam {String} id ID do agendamento
+// @apiParam {String} [customer_name] Nome do cliente
+// @apiParam {String} [customer_email] Email do cliente
+// @apiParam {String} [customer_phone] Telefone do cliente
+// @apiParam {String} [appointment_date] Data (YYYY-MM-DD)
+// @apiParam {String} [appointment_time] Horário (HH:MM)
+// @apiParam {Number} [duration_minutes] Duração em minutos
+// @apiParam {String} [notes] Observações
 router.put('/:id', validateAppointment, appointmentController.updateAppointment);
 
 // PUT /api/appointments/:id/cancel - Cancelar agendamento
 router.put('/:id/cancel', appointmentController.cancelAppointment);
 
 // DELETE /api/appointments/:id - Deletar agendamento
+// @api {delete} /appointments/:id Excluir agendamento
+// @apiName DeleteAppointment
+// @apiGroup Appointments
+// @apiParam {String} id ID do agendamento
 router.delete('/:id', appointmentController.deleteAppointment);
 
 module.exports = router;
