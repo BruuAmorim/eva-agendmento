@@ -6,7 +6,26 @@
  */
 
 // URL base da API (configurável via variável de ambiente)
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
+const getApiBaseUrl = () => {
+  // Se definida via ambiente, usa ela
+  if (process.env.API_BASE_URL) {
+    return process.env.API_BASE_URL;
+  }
+
+  // Em produção, tenta detectar automaticamente ou usa localhost como fallback
+  if (process.env.NODE_ENV === 'production') {
+    // Pode ser configurado via API_HOST ou similar
+    const host = process.env.API_HOST || 'localhost';
+    const port = process.env.PORT || 3000;
+    const protocol = process.env.API_PROTOCOL || 'http';
+    return `${protocol}://${host}:${port}/api`;
+  }
+
+  // Em desenvolvimento, usa localhost
+  return `http://localhost:${process.env.PORT || 3000}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Configurações da API
 const API_CONFIG = {
@@ -52,6 +71,11 @@ const API_CONFIG = {
       delete: '/appointments/:id',
       availableSlots: '/appointments/available/:date',
       stats: '/appointments/stats/overview'
+    },
+
+    // Slots/Horários (alias para compatibilidade)
+    slots: {
+      available: '/slots/:date'
     },
 
     // Integrações
@@ -127,5 +151,6 @@ module.exports = {
   getEndpointUrl,
   getApiInfo
 };
+
 
 

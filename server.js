@@ -7,8 +7,9 @@ require('dotenv').config();
 
 const { initializeDatabase } = require('./backend/src/models');
 const { API_CONFIG, getApiInfo } = require('./backend/src/config/api');
-const SeedService = require('./backend/src/services/seedService');
+// const SeedService = require('./backend/src/services/seedService'); // Temporariamente desabilitado
 const appointmentRoutes = require('./backend/src/routes/appointments');
+const appointmentController = require('./backend/src/controllers/appointmentController');
 const authRoutes = require('./backend/src/routes/authRoutes');
 const userRoutes = require('./backend/src/routes/userRoutes');
 const integrationRoutes = require('./backend/src/routes/integrationRoutes');
@@ -71,18 +72,31 @@ app.get('/health', (req, res) => {
 
 // Health check da API com informações completas (para integrações externas)
 app.get('/api/health', (req, res) => {
+  const packageVersion = require('./package.json').version;
+
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     service: API_CONFIG.info.name,
-    version: API_CONFIG.info.version,
+    version: packageVersion,
     environment: API_CONFIG.environment,
     baseUrl: API_CONFIG.baseUrl,
-    endpoints: API_CONFIG.endpoints,
+    endpoints: {
+      // Endpoints principais documentados para integrações
+      health: '/api/health',
+      slots: API_CONFIG.endpoints.slots.available,
+      appointments: {
+        list: API_CONFIG.endpoints.appointments.list,
+        create: API_CONFIG.endpoints.appointments.create,
+        update: API_CONFIG.endpoints.appointments.update,
+        delete: API_CONFIG.endpoints.appointments.delete
+      }
+    },
     server: {
       host: '0.0.0.0',
       port: PORT
-    }
+    },
+    documentation: `${API_CONFIG.baseUrl}/health`
   });
 });
 
@@ -109,6 +123,9 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/n8n', n8nRoutes);
 
+// Rota adicional para slots (alias para compatibilidade com integrações externas)
+app.get('/api/slots/:date', appointmentController.getAvailableSlots);
+
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -132,8 +149,9 @@ async function startServer() {
     // Inicializar banco de dados
     await initializeDatabase();
 
-    // Criar usuários de teste
-    await SeedService.ensureSeedUsers();
+    // Seed de usuários temporariamente desabilitado para evitar problemas de dependência circular
+    // TODO: Corrigir import do modelo User no seedService
+    console.log('⚠️ Seed de usuários desabilitado - usuários podem ser criados manualmente se necessário');
 
     // Escuta em 0.0.0.0 para permitir acessos externos (n8n, integrações)
     app.listen(PORT, '0.0.0.0', () => {

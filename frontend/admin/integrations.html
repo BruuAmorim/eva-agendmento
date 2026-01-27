@@ -205,11 +205,14 @@
       <div style="margin-top: 20px;">
         <h4 style="color: var(--text); margin-bottom: 10px;">📋 Endpoints Principais:</h4>
         <div style="background: var(--background); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
-          <div><strong>GET</strong> /api/appointments/available/:date - Horários disponíveis</div>
+          <div><strong>GET</strong> /api/slots/:date - Horários disponíveis</div>
           <div><strong>POST</strong> /api/appointments - Criar agendamento</div>
           <div><strong>PUT</strong> /api/appointments/:id - Atualizar agendamento</div>
           <div><strong>DELETE</strong> /api/appointments/:id - Excluir agendamento</div>
           <div><strong>GET</strong> /api/health - Status da API</div>
+        </div>
+        <div class="help-text" style="margin-top: 10px;">
+          💡 <strong>Dica:</strong> Use estes endpoints para configurar webhooks no n8n e outras integrações externas.
         </div>
       </div>
     </div>
@@ -311,24 +314,38 @@
         }
       }
 
-      async       async loadApiBaseUrl() {
+      async loadApiBaseUrl() {
         try {
           // Buscar informações da API para obter a URL base
           const response = await window.authManager.apiRequest('/api/health');
-          if (response.success) {
+          if (response.success && response.baseUrl) {
             const apiBaseUrlInput = document.getElementById('apiBaseUrl');
             if (apiBaseUrlInput) {
-              apiBaseUrlInput.value = response.baseUrl || 'http://localhost:3000/api';
+              apiBaseUrlInput.value = response.baseUrl;
             }
+            return;
           }
         } catch (error) {
           console.error('Erro ao carregar URL base da API:', error);
-          // Fallback para URL padrão
-          const apiBaseUrlInput = document.getElementById('apiBaseUrl');
-          if (apiBaseUrlInput) {
-            apiBaseUrlInput.value = 'http://localhost:3000/api';
-          }
         }
+
+        // Fallback: detectar automaticamente baseada na localização do frontend
+        const apiBaseUrlInput = document.getElementById('apiBaseUrl');
+        if (apiBaseUrlInput) {
+          const autoDetectedUrl = this.getAutoDetectedApiUrl();
+          apiBaseUrlInput.value = autoDetectedUrl;
+        }
+      }
+
+      getAutoDetectedApiUrl() {
+        // Em produção, usar a mesma origem que o frontend
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          return `${window.location.origin}/api`;
+        }
+
+        // Em desenvolvimento, usar localhost com a porta atual
+        const port = window.location.port || 3000;
+        return `http://localhost:${port}/api`;
       }
 
       loadIntegration() {

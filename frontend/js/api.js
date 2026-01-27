@@ -1,7 +1,18 @@
 // API Client para EvAgendamento
 // Gerencia todas as comunicações com a API RESTful
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// URL base da API (sempre aponta para o backend na porta 3000)
+const getApiBaseUrl = () => {
+  // Em produção, usar a mesma origem que o frontend (se o backend estiver na mesma origem)
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${window.location.origin}/api`;
+  }
+
+  // Em desenvolvimento, sempre usar porta 3000 (onde o backend está rodando)
+  return `http://localhost:3000/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class APIClient {
     constructor(baseURL = API_BASE_URL) {
@@ -26,7 +37,25 @@ class APIClient {
 
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
+
+            // Verificar se a resposta tem conteúdo antes de tentar parse JSON
+            let data = null;
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    // Se falhar o parse JSON, criar um erro com a resposta de texto
+                    console.warn('Falha ao fazer parse JSON da resposta:', jsonError);
+                    const textResponse = await response.text();
+                    data = { error: 'Resposta inválida da API', details: textResponse };
+                }
+            } else {
+                // Resposta não é JSON, tentar como texto
+                const textResponse = await response.text();
+                data = { message: textResponse };
+            }
 
             if (!response.ok) {
                 // Criar erro com informações completas da resposta
@@ -318,6 +347,11 @@ class APIClient {
 const API = new APIClient();
 
 // Exportar para uso em outros módulos
+const corsOptions = {
+  origin: ['https://n8neva.com', 'https://*.ngrok-free.app'],
+  credentials: true
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = APIClient;
 }

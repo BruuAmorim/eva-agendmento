@@ -339,6 +339,21 @@ class EvAgendamento {
         });
     }
 
+    // Verificar se um horário específico está disponível
+    isTimeSlotAvailable(date, time) {
+        // Primeiro, garantir que temos os agendamentos carregados para esta data
+        const dateAppointments = this.appointments.filter(apt => apt.appointment_date === date);
+
+        // Verificar se há conflito com agendamentos existentes
+        const requestedHour = parseInt(time.split(':')[0]);
+        const hasConflict = dateAppointments.some(apt => {
+            const aptHour = parseInt(apt.appointment_time.split(':')[0]);
+            return aptHour === requestedHour;
+        });
+
+        return !hasConflict;
+    }
+
     async updateAvailableTimes() {
         const date = document.getElementById('appointment_date').value;
         if (date) {
@@ -350,10 +365,10 @@ class EvAgendamento {
 
     async handleAppointmentSubmit(form) {
         const formData = new FormData(form);
-        
+
         // Obter instance_id do usuário logado
         const currentInstanceId = localStorage.getItem('currentInstanceId');
-        
+
         const appointmentData = {
             customer_name: formData.get('customer_name'),
             customer_phone: formData.get('customer_phone'),
@@ -362,6 +377,27 @@ class EvAgendamento {
             duration_minutes: 60, // duração fixa de 1 hora
             notes: '' // sem observações
         };
+
+        // Validação básica
+        if (!appointmentData.customer_name || !appointmentData.appointment_date || !appointmentData.appointment_time) {
+            this.showToast('Preencha todos os campos obrigatórios', 'warning');
+            return;
+        }
+
+        // Garantir que os agendamentos estejam carregados para a data selecionada
+        const filterDateEl = document.getElementById('filterDate');
+        if (filterDateEl && filterDateEl.value !== appointmentData.appointment_date) {
+            filterDateEl.value = appointmentData.appointment_date;
+            await this.loadAppointments();
+        }
+
+        // Verificar disponibilidade do horário antes de tentar criar
+        if (!this.isTimeSlotAvailable(appointmentData.appointment_date, appointmentData.appointment_time)) {
+            this.showToast('Horário indisponível. Este horário já está ocupado.', 'error');
+            // Recarregar disponibilidade para mostrar horários atualizados
+            this.checkAvailability();
+            return;
+        }
 
         // Adicionar instance_id ao agendamento (quando a API suportar)
         if (currentInstanceId) {

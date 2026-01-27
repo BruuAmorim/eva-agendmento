@@ -63,6 +63,14 @@ router.get('/stats/overview', appointmentController.getAppointmentStats);
 // @apiSuccess {Object[]} slots Lista de horários disponíveis
 router.get('/available/:date', appointmentController.getAvailableSlots);
 
+// GET /api/slots/:date - Alias para horários disponíveis (compatibilidade com integrações)
+// @api {get} /slots/:date Buscar horários disponíveis
+// @apiName GetSlots
+// @apiGroup Slots
+// @apiParam {String} date Data no formato YYYY-MM-DD
+// @apiParam {Number} [duration=60] Duração em minutos
+// @apiSuccess {Object[]} slots Lista de horários disponíveis
+
 // GET /api/appointments/:id - Buscar agendamento específico
 // @api {get} /appointments/:id Buscar agendamento por ID
 // @apiName GetAppointment

@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User } = require('../models/index');
 
 /**
  * Serviço para criar usuários iniciais (seeds)
