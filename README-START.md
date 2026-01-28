@@ -95,3 +95,8 @@ Se receber "ERR_CONNECTION_REFUSED":
 - **Frontend:** HTML/CSS/JS + http-server (porta 8080)
 - **Banco:** SQLite (desenvolvimento)
 
+
+
+
+
+

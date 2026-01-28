@@ -1,18 +1,9 @@
 // API Client para EvAgendamento
 // Gerencia todas as comunicações com a API RESTful
 
-// URL base da API (sempre aponta para o backend na porta 3000)
-const getApiBaseUrl = () => {
-  // Em produção, usar a mesma origem que o frontend (se o backend estiver na mesma origem)
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `${window.location.origin}/api`;
-  }
-
-  // Em desenvolvimento, sempre usar porta 3000 (onde o backend está rodando)
-  return `http://localhost:3000/api`;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+// URL base da API (configurada dinamicamente via config-api.js)
+// A configuração é feita no arquivo config-api.js e acessada via window.API_CONFIG
+const API_BASE_URL = window.API_CONFIG ? window.API_CONFIG.getBaseUrl() : 'http://localhost:3000/api';
 
 class APIClient {
     constructor(baseURL = API_BASE_URL) {

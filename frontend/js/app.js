@@ -16,6 +16,8 @@ class EvAgendamento {
         this.setTheme(this.currentTheme);
         this.loadInitialData();
         this.showWelcomeMessage();
+        this.checkModeratorAccess();
+        this.loadCompanyInfo();
     }
 
     bindEvents() {
@@ -372,6 +374,7 @@ class EvAgendamento {
         const appointmentData = {
             customer_name: formData.get('customer_name'),
             customer_phone: formData.get('customer_phone'),
+            service_type: formData.get('service_type') || null,
             appointment_date: formData.get('appointment_date'),
             appointment_time: formData.get('appointment_time'),
             duration_minutes: 60, // duração fixa de 1 hora
@@ -548,11 +551,12 @@ class EvAgendamento {
 
         const time = appointment.appointment_time;
         const phone = appointment.customer_phone || 'Sem telefone';
+        const protocol = appointment.protocol || 'N/A';
 
         div.innerHTML = `
             <div class="appointment-list-time">${time}</div>
             <div class="appointment-list-info">
-                <div class="appointment-list-name">${appointment.customer_name}</div>
+                <div class="appointment-list-name">${appointment.customer_name} <small style="color: var(--text-muted); font-weight: normal;">(${protocol})</small></div>
                 <div class="appointment-list-phone">${phone}</div>
             </div>
             <div class="appointment-list-actions">
@@ -976,6 +980,462 @@ class EvAgendamento {
             console.error('Erro ao excluir agendamento:', error);
             this.showToast('Erro ao excluir agendamento', 'error');
         }
+    }
+
+    // ========== FUNCIONALIDADES DO MODERADOR ==========
+
+    /**
+     * Verifica se o usuário logado é moderador e mostra botão de configurações
+     */
+    checkModeratorAccess() {
+        const user = window.authManager?.currentUser;
+        if (user && user.role === 'moderator') {
+            this.showModeratorSettingsButton();
+        }
+    }
+
+    /**
+     * Mostra o botão flutuante de configurações para moderadores
+     */
+    showModeratorSettingsButton() {
+        // Criar botão flutuante
+        const settingsButton = document.createElement('button');
+        settingsButton.id = 'moderatorSettingsBtn';
+        settingsButton.innerHTML = '⚙️';
+        settingsButton.title = 'Configurações do Moderador';
+        settingsButton.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0099ff, #007acc);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 153, 255, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        // Efeitos hover
+        settingsButton.onmouseover = () => {
+            settingsButton.style.transform = 'scale(1.1)';
+            settingsButton.style.boxShadow = '0 6px 25px rgba(0, 153, 255, 0.6)';
+        };
+        settingsButton.onmouseout = () => {
+            settingsButton.style.transform = 'scale(1)';
+            settingsButton.style.boxShadow = '0 4px 20px rgba(0, 153, 255, 0.4)';
+        };
+
+        // Event listener
+        settingsButton.addEventListener('click', () => {
+            this.openModeratorSettingsModal();
+        });
+
+        // Adicionar ao DOM
+        document.body.appendChild(settingsButton);
+
+        console.log('🎛️ Botão de configurações do moderador adicionado');
+    }
+
+    /**
+     * Abre o modal de configurações do moderador
+     */
+    async openModeratorSettingsModal() {
+        try {
+            // Buscar dados atuais
+            const statsResponse = await window.authManager.apiRequest('/api/moderator/stats');
+            const settingsResponse = await window.authManager.apiRequest('/api/moderator/settings');
+
+            const stats = statsResponse.success ? statsResponse.data : null;
+            const settings = settingsResponse.success ? settingsResponse.data : { company_name: '', services: [] };
+
+            // Criar modal
+            this.createModeratorSettingsModal(stats, settings);
+
+        } catch (error) {
+            console.error('Erro ao carregar configurações do moderador:', error);
+            this.showToast('Erro ao carregar configurações', 'error');
+        }
+    }
+
+    /**
+     * Cria e exibe o modal de configurações do moderador
+     */
+    createModeratorSettingsModal(stats, settings) {
+        // Criar overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        `;
+
+        // Criar modal
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+        `;
+
+        modal.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h2 style="margin: 0; color: #333; font-size: 1.5rem;">⚙️ Configurações do Moderador</h2>
+                <button id="closeModeratorModal" style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #666;
+                    padding: 5px;
+                ">×</button>
+            </div>
+
+            <!-- Dashboard Rápido -->
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.2rem;">📊 Dashboard Rápido</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #0099ff;">${stats?.total_today || 0}</div>
+                        <div style="color: #666; font-size: 0.9rem;">Agendamentos Hoje</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #28a745;">${stats?.top_service || 'Nenhum'}</div>
+                        <div style="color: #666; font-size: 0.9rem;">Serviço Top</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurações da Empresa -->
+            <div>
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 1.2rem;">🏢 Configurações da Empresa</h3>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+                        Nome da Empresa
+                    </label>
+                    <input
+                        type="text"
+                        id="companyNameInput"
+                        placeholder="Digite o nome da empresa"
+                        value="${settings.company_name || ''}"
+                        style="
+                            width: 100%;
+                            padding: 12px;
+                            border: 1px solid #ddd;
+                            border-radius: 6px;
+                            font-size: 1rem;
+                            box-sizing: border-box;
+                        "
+                    >
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">
+                        Serviços Disponíveis
+                    </label>
+                    <div id="servicesContainer" style="margin-bottom: 10px;">
+                        ${this.renderServicesList(settings.services || [])}
+                    </div>
+                    <button
+                        id="addServiceBtn"
+                        style="
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 0.9rem;
+                        "
+                    >
+                        ➕ Adicionar Serviço
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button
+                        id="cancelModeratorSettings"
+                        style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 1rem;
+                        "
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        id="saveModeratorSettings"
+                        style="
+                            background: #0099ff;
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 1rem;
+                        "
+                    >
+                        💾 Salvar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Event listeners
+        modal.querySelector('#closeModeratorModal').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
+
+        modal.querySelector('#cancelModeratorSettings').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
+
+        modal.querySelector('#saveModeratorSettings').addEventListener('click', async () => {
+            await this.saveModeratorSettings();
+            document.body.removeChild(overlay);
+        });
+
+        modal.querySelector('#addServiceBtn').addEventListener('click', () => {
+            this.addServiceInput();
+        });
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
+    /**
+     * Renderiza a lista de serviços como inputs editáveis
+     */
+    renderServicesList(services) {
+        return services.map((service, index) => `
+            <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: center;" class="service-item">
+                <input
+                    type="text"
+                    value="${service}"
+                    placeholder="Nome do serviço"
+                    style="
+                        flex: 1;
+                        padding: 8px 12px;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        font-size: 0.9rem;
+                    "
+                    data-index="${index}"
+                >
+                <button
+                    class="remove-service-btn"
+                    style="
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        padding: 8px 12px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 0.9rem;
+                    "
+                    data-index="${index}"
+                >
+                    🗑️
+                </button>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Adiciona um novo input de serviço
+     */
+    addServiceInput() {
+        const container = document.getElementById('servicesContainer');
+        const newServiceDiv = document.createElement('div');
+        newServiceDiv.style.cssText = 'display: flex; gap: 10px; margin-bottom: 8px; align-items: center;';
+        newServiceDiv.className = 'service-item';
+        newServiceDiv.innerHTML = `
+            <input
+                type="text"
+                placeholder="Nome do serviço"
+                style="
+                    flex: 1;
+                    padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
+                "
+            >
+            <button
+                class="remove-service-btn"
+                style="
+                    background: #dc3545;
+                    color: white;
+                    border: none;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                "
+            >
+                🗑️
+            </button>
+        `;
+
+        container.appendChild(newServiceDiv);
+
+        // Event listener para remover
+        newServiceDiv.querySelector('.remove-service-btn').addEventListener('click', function() {
+            this.closest('.service-item').remove();
+        });
+    }
+
+    /**
+     * Salva as configurações do moderador
+     */
+    async saveModeratorSettings() {
+        try {
+            const companyName = document.getElementById('companyNameInput').value.trim();
+
+            // Coletar serviços
+            const serviceInputs = document.querySelectorAll('#servicesContainer input[type="text"]');
+            const services = Array.from(serviceInputs)
+                .map(input => input.value.trim())
+                .filter(service => service.length > 0);
+
+            const settingsData = {
+                company_name: companyName || null,
+                services: services
+            };
+
+            const response = await window.authManager.apiRequest('/api/moderator/settings', {
+                method: 'PUT',
+                body: JSON.stringify(settingsData)
+            });
+
+            if (response.success) {
+                this.showToast('Configurações salvas com sucesso!', 'success');
+                // Atualizar título da página se necessário
+                this.updateCompanyTitle(companyName);
+            } else {
+                // Tentar extrair mensagem mais detalhada do erro
+                let errorMessage = response.message || response.details || 'Erro ao salvar configurações';
+
+                // Se for erro relacionado à tabela não existir
+                if (errorMessage.includes('configuração do banco') || errorMessage.includes('tabela')) {
+                    errorMessage = 'Banco de dados não configurado. Contate o administrador.';
+                }
+
+                this.showToast(errorMessage, 'error');
+            }
+
+        } catch (error) {
+            console.error('Erro ao salvar configurações:', error);
+            // Tentar extrair mensagem mais detalhada do erro
+            let errorMessage = 'Erro ao salvar configurações';
+            if (error.message && error.message.includes('JSON')) {
+                errorMessage = 'Erro de comunicação com o servidor. Tente novamente.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            this.showToast(errorMessage, 'error');
+        }
+    }
+
+    /**
+     * Atualiza o título da página com o nome da empresa
+     */
+    updateCompanyTitle(companyName) {
+        if (companyName) {
+            document.title = `${companyName} - EvAgendamento`;
+            // Atualizar também o título no header se existir
+            const headerTitle = document.querySelector('.header-title span');
+            if (headerTitle) {
+                headerTitle.textContent = companyName;
+            }
+        } else {
+            document.title = 'Sistema de Agendamentos - EvAgendamento';
+            const headerTitle = document.querySelector('.header-title span');
+            if (headerTitle) {
+                headerTitle.textContent = 'Sistema de Agendamentos';
+            }
+        }
+    }
+
+    /**
+     * Carrega informações da empresa (nome e serviços)
+     */
+    async loadCompanyInfo() {
+        try {
+            const response = await window.authManager.apiRequest('/api/moderator/company-info');
+            if (response.success && response.data) {
+                const { company_name, services } = response.data;
+
+                // Atualizar título da página
+                this.updateCompanyTitle(company_name);
+
+                // Carregar serviços no dropdown
+                this.populateServicesDropdown(services);
+
+                console.log('🏢 Informações da empresa carregadas:', { company_name, services_count: services.length });
+            }
+        } catch (error) {
+            console.warn('Erro ao carregar informações da empresa:', error.message);
+            // Usar valores padrão se não conseguir carregar
+            this.populateServicesDropdown([]);
+        }
+    }
+
+    /**
+     * Preenche o dropdown de serviços
+     */
+    populateServicesDropdown(services) {
+        const serviceSelect = document.getElementById('serviceType');
+        if (!serviceSelect) return;
+
+        // Limpar opções existentes (exceto a primeira)
+        while (serviceSelect.options.length > 1) {
+            serviceSelect.remove(1);
+        }
+
+        // Adicionar serviços
+        services.forEach(service => {
+            const option = document.createElement('option');
+            option.value = service;
+            option.textContent = service;
+            serviceSelect.appendChild(option);
+        });
+
+        // Adicionar opção "Outro" se houver serviços
+        if (services.length > 0) {
+            const otherOption = document.createElement('option');
+            otherOption.value = 'Outro';
+            otherOption.textContent = 'Outro (especificar em observações)';
+            serviceSelect.appendChild(otherOption);
+        }
+
+        console.log(`📋 Dropdown de serviços populado com ${services.length} opções`);
     }
 }
 

@@ -106,12 +106,19 @@ class N8nAppointmentController {
     }
   }
 
-  // DELETE /api/n8n/appointments/:id
+  // DELETE /api/n8n/appointments
   static async remove(req, res) {
     try {
-      const { id } = req.params;
+      const { protocol } = req.body;
 
-      const appointment = await Appointment.findById(id);
+      if (!protocol) {
+        return res.status(400).json({
+          success: false,
+          error: 'Protocolo é obrigatório'
+        });
+      }
+
+      const appointment = await Appointment.findByProtocol(protocol);
       if (!appointment) {
         return res.status(404).json({
           success: false,

@@ -21,7 +21,7 @@ echo   Sistema iniciado com sucesso!
 echo ========================================
 echo.
 echo URLs de acesso:
-echo - Login:     http://localhost:8080/css/index.html
+echo - Login:     http://localhost:8080/css/ index.html
 echo - Admin:     http://localhost:8080/admin/dashboard
 echo - Usuario:   http://localhost:8080/app/agendamentos
 echo.

@@ -4,6 +4,91 @@ const { v4: uuidv4 } = require('uuid');
 // Armazenamento em memória para desenvolvimento
 let memoryStorage = [];
 
+// Inicializar com dados de teste após a definição da classe
+setTimeout(() => {
+  if (memoryStorage.length === 0 && useMemoryStorage()) {
+    // Dados de teste para o dashboard
+    const testData = [
+      {
+        id: 'test-1',
+        protocol: '20240128-ABC1',
+        customer_name: 'João Silva',
+        customer_email: 'joao@email.com',
+        customer_phone: '(11) 99999-9999',
+        appointment_date: '2024-01-28',
+        appointment_time: '09:00',
+        duration_minutes: 60,
+        notes: 'Corte de cabelo',
+        status: 'confirmed',
+        created_at: new Date('2024-01-25'),
+        updated_at: new Date('2024-01-25')
+      },
+      {
+        id: 'test-2',
+        protocol: '20240127-DEF2',
+        customer_name: 'Maria Santos',
+        customer_email: 'maria@email.com',
+        customer_phone: '(11) 88888-8888',
+        appointment_date: '2024-01-27',
+        appointment_time: '14:00',
+        duration_minutes: 60,
+        notes: 'Escova',
+        status: 'confirmed',
+        created_at: new Date('2024-01-24'),
+        updated_at: new Date('2024-01-24')
+      },
+      {
+        id: 'test-3',
+        protocol: '20240126-GHI3',
+        customer_name: 'Pedro Oliveira',
+        customer_email: 'pedro@email.com',
+        customer_phone: '(11) 77777-7777',
+        appointment_date: '2024-01-26',
+        appointment_time: '10:00',
+        duration_minutes: 60,
+        notes: 'Corte de cabelo',
+        status: 'confirmed',
+        created_at: new Date('2024-01-23'),
+        updated_at: new Date('2024-01-23')
+      },
+      {
+        id: 'test-4',
+        protocol: '20240125-JKL4',
+        customer_name: 'Ana Costa',
+        customer_email: 'ana@email.com',
+        customer_phone: '(11) 66666-6666',
+        appointment_date: '2024-01-25',
+        appointment_time: '16:00',
+        duration_minutes: 60,
+        notes: 'Coloração',
+        status: 'confirmed',
+        created_at: new Date('2024-01-22'),
+        updated_at: new Date('2024-01-22')
+      },
+      {
+        id: 'test-5',
+        protocol: '20240124-MNO5',
+        customer_name: 'Carlos Lima',
+        customer_email: 'carlos@email.com',
+        customer_phone: '(11) 55555-5555',
+        appointment_date: '2024-01-24',
+        appointment_time: '11:00',
+        duration_minutes: 60,
+        notes: 'Corte de cabelo',
+        status: 'confirmed',
+        created_at: new Date('2024-01-21'),
+        updated_at: new Date('2024-01-21')
+      }
+    ];
+
+    testData.forEach(data => {
+      memoryStorage.push(new Appointment(data));
+    });
+
+    console.log('📊 Dados de teste inicializados:', memoryStorage.length, 'agendamentos');
+  }
+}, 100);
+
 // Verificar se deve usar armazenamento em memória
 const useMemoryStorage = () => {
   // Usar armazenamento em memória para desenvolvimento
@@ -13,6 +98,7 @@ const useMemoryStorage = () => {
 class Appointment {
   constructor(data) {
     this.id = data.id || uuidv4();
+    this.protocol = data.protocol || this.generateProtocol();
     this.customer_name = data.customer_name;
     this.customer_email = data.customer_email;
     this.customer_phone = data.customer_phone;
@@ -72,6 +158,39 @@ class Appointment {
     return emailRegex.test(email);
   }
 
+  // Gerar protocolo único (formato curto: AG-XXXX onde AG é prefixo e XXXX são 4-6 caracteres alfanuméricos)
+  static generateProtocol() {
+    // Prefixo fixo para identificação
+    const prefix = 'AG';
+
+    // Gerar 4-6 caracteres aleatórios (letras maiúsculas e números, excluindo caracteres confusos)
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // Sem 0, O, I, 1
+    const randomLength = Math.floor(Math.random() * 3) + 4; // 4, 5 ou 6 caracteres
+
+    let randomStr = '';
+    for (let i = 0; i < randomLength; i++) {
+      randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    return `${prefix}-${randomStr}`;
+  }
+
+  // Verificar se protocolo já existe (para garantir unicidade)
+  static async isProtocolUnique(protocol, excludeId = null) {
+    if (useMemoryStorage()) {
+      // Usar armazenamento em memória
+      const existing = memoryStorage.find(apt =>
+        apt.protocol === protocol && (!excludeId || apt.id !== excludeId)
+      );
+      return !existing;
+    } else {
+      // Usar PostgreSQL
+      const queryText = 'SELECT COUNT(*) as count FROM appointments WHERE protocol = $1 AND ($2::uuid IS NULL OR id != $2)';
+      const result = await query(queryText, [protocol, excludeId]);
+      return parseInt(result.rows[0].count) === 0;
+    }
+  }
+
   // Criar novo agendamento
   static async create(data) {
     const validationErrors = this.validate(data);
@@ -94,8 +213,21 @@ class Appointment {
       throw new Error('Horário indisponível - conflito com outro agendamento');
     }
 
+    // Gerar protocolo único
+    let protocol;
+    let attempts = 0;
+    do {
+      protocol = Appointment.generateProtocol();
+      attempts++;
+      // Limitar tentativas para evitar loop infinito (muito improvável)
+      if (attempts > 10) {
+        throw new Error('Não foi possível gerar um protocolo único');
+      }
+    } while (!(await Appointment.isProtocolUnique(protocol)));
+
     const appointment = new Appointment({
       ...data,
+      protocol,
       appointment_date: normalizedDate,
       appointment_time: normalizedTime
     });
@@ -109,15 +241,16 @@ class Appointment {
       // Usar PostgreSQL
       const queryText = `
         INSERT INTO appointments (
-          id, customer_name, customer_email, customer_phone,
+          id, protocol, customer_name, customer_email, customer_phone,
           appointment_date, appointment_time, duration_minutes,
           notes, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `;
 
       const values = [
         appointment.id,
+        appointment.protocol,
         appointment.customer_name,
         appointment.customer_email,
         appointment.customer_phone,
@@ -150,6 +283,25 @@ class Appointment {
       // Usar PostgreSQL
       const queryText = 'SELECT * FROM appointments WHERE id = $1';
       const result = await query(queryText, [id]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return new Appointment(result.rows[0]);
+    }
+  }
+
+  // Buscar agendamento por protocolo (case-insensitive)
+  static async findByProtocol(protocol) {
+    if (useMemoryStorage()) {
+      // Usar armazenamento em memória
+      const appointment = memoryStorage.find(apt => apt.protocol.toUpperCase() === protocol.toUpperCase());
+      return appointment || null;
+    } else {
+      // Usar PostgreSQL - busca case-insensitive
+      const queryText = 'SELECT * FROM appointments WHERE UPPER(protocol) = UPPER($1)';
+      const result = await query(queryText, [protocol]);
 
       if (result.rows.length === 0) {
         return null;
@@ -522,6 +674,7 @@ class Appointment {
   toJSON() {
     return {
       id: this.id,
+      protocol: this.protocol,
       customer_name: this.customer_name,
       customer_email: this.customer_email,
       customer_phone: this.customer_phone,

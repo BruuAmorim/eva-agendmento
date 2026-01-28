@@ -325,11 +325,34 @@ class AuthManager {
 
         const response = await fetch(url, { ...defaultOptions, ...options });
         let data = null;
+        const contentType = response.headers.get('content-type');
+
         try {
-            data = await response.json();
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                // Se não for JSON, tentar ler como texto e criar erro
+                const textResponse = await response.text();
+                console.error('❌ Resposta não-JSON do servidor:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType,
+                    body: textResponse.substring(0, 500) // primeiros 500 chars
+                });
+                data = {
+                    success: false,
+                    message: `Erro do servidor (${response.status}): ${response.statusText}`,
+                    details: textResponse
+                };
+            }
         } catch (e) {
-            // Se o backend estiver indisponível ou responder HTML, manter um payload padrão
-            data = { success: false, message: 'Resposta inválida do servidor' };
+            // Se falhar ao ler a resposta
+            console.error('❌ Erro ao processar resposta:', e);
+            data = {
+                success: false,
+                message: 'Erro de comunicação com o servidor',
+                details: e.message
+            };
         }
 
         // IMPORTANTE:

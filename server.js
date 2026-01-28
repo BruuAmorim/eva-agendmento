@@ -14,6 +14,8 @@ const authRoutes = require('./backend/src/routes/authRoutes');
 const userRoutes = require('./backend/src/routes/userRoutes');
 const integrationRoutes = require('./backend/src/routes/integrationRoutes');
 const n8nRoutes = require('./backend/src/routes/n8nRoutes');
+const dashboardRoutes = require('./backend/src/routes/dashboard');
+const moderatorRoutes = require('./backend/src/routes/moderator');
 
 const app = express();
 const PORT = API_CONFIG.port;
@@ -122,9 +124,14 @@ app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/n8n', n8nRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/moderator', moderatorRoutes);
 
 // Rota adicional para slots (alias para compatibilidade com integrações externas)
 app.get('/api/slots/:date', appointmentController.getAvailableSlots);
+
+// Rota adicional para disponibilidade em português (compatibilidade com n8n)
+app.get('/api/agendamento/disponibilidade', appointmentController.getDisponibilidade);
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {

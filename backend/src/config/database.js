@@ -1,17 +1,67 @@
-const { Pool } = require('pg');
-const SeedService = require('../services/seedService');
+// ===========================================
+// CONFIGURAÇÃO DE BANCO DE DADOS HÍBRIDA
+// ===========================================
+// Lazy loading: só importa o driver necessário baseado no ambiente
 
-// Configuração da conexão com PostgreSQL
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'evagendamento',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  max: 20, // Máximo de conexões no pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+let db = null;
+let isInitialized = false;
+
+// Função para inicializar banco de dados (chamada uma vez)
+async function initializeDatabase() {
+  if (isInitialized) return db;
+
+  try {
+    if (process.env.DATABASE_URL) {
+      // ===========================================
+      // PRODUÇÃO: PostgreSQL (Supabase/Render)
+      // ===========================================
+      console.log('🏭 Ambiente de produção detectado, conectando ao PostgreSQL...');
+
+      // IMPORTAÇÃO CONDICIONAL: só carrega pg quando necessário
+      const { Pool } = require('pg');
+
+      const poolConfig = {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }, // Obrigatório para Supabase
+        max: 10, // Reduzido para Render
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      };
+
+      db = new Pool(poolConfig);
+
+      // Testar conexão
+      const client = await db.connect();
+      console.log('✅ Conectado ao PostgreSQL (Supabase)!');
+      client.release();
+
+    } else {
+      // ===========================================
+      // DESENVOLVIMENTO: SQLite (Local)
+      // ===========================================
+      console.log('🏠 Ambiente de desenvolvimento detectado, usando SQLite...');
+
+      // IMPORTAÇÃO CONDICIONAL: só carrega sqlite quando necessário
+      // O Render NUNCA vai executar essas linhas!
+      const sqlite3 = require('sqlite3').verbose();
+      const { open } = require('sqlite');
+
+      db = await open({
+        filename: process.env.DB_PATH || './database.sqlite',
+        driver: sqlite3.Database,
+      });
+
+      console.log('✅ SQLite conectado localmente!');
+    }
+
+    isInitialized = true;
+    return db;
+
+  } catch (error) {
+    console.error('❌ Erro ao inicializar banco de dados:', error);
+    throw error;
+  }
+}
 
 // Event listeners para monitoramento
 pool.on('connect', (client) => {
@@ -26,69 +76,142 @@ pool.on('error', (err, client) => {
 // Função para conectar ao banco
 async function connectDB() {
   try {
-    const client = await pool.connect();
-    console.log('✅ Conexão com PostgreSQL estabelecida com sucesso');
+    // Inicializar banco se necessário
+    if (!db) {
+      db = await initializeDatabase();
+    }
 
-    // Criar tabelas se não existirem
-    await createTables(client);
+    // Criar tabelas se necessário
+    await createTables();
 
-    client.release();
+    console.log('✅ Banco de dados conectado e tabelas verificadas!');
     return true;
+
   } catch (error) {
-    console.error('❌ Erro ao conectar com PostgreSQL:', error);
+    console.error('❌ Erro ao conectar banco de dados:', error);
     throw error;
   }
 }
 
 // Função para criar tabelas
-async function createTables(client) {
+async function createTables() {
+  const isProduction = !!process.env.DATABASE_URL;
+
   try {
-    // Tabela de usuários
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin_master', 'user')),
-        name VARCHAR(255) NOT NULL,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+    if (isProduction) {
+      // ===========================================
+      // TABELAS POSTGRESQL (Produção)
+      // ===========================================
+      console.log('📋 Verificando tabelas PostgreSQL...');
 
-      -- Índice para email
-      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-    `);
+      const queries = [
+        `CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin_master', 'moderator', 'user')),
+          name VARCHAR(255) NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
+        `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
+        `CREATE TABLE IF NOT EXISTS appointments (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          customer_name VARCHAR(255) NOT NULL,
+          customer_email VARCHAR(255),
+          customer_phone VARCHAR(20),
+          appointment_date DATE NOT NULL,
+          appointment_time TIME NOT NULL,
+          duration_minutes INTEGER DEFAULT 60,
+          notes TEXT,
+          status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          cancelled_at TIMESTAMP WITH TIME ZONE,
+          cancellation_reason TEXT
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_customer ON appointments(customer_name);`,
+        `CREATE TABLE IF NOT EXISTS moderator_settings (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          company_name VARCHAR(255),
+          services JSONB DEFAULT '[]'::jsonb,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id)
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings(user_id);`
+      ];
 
-    // Tabela de agendamentos
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS appointments (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        customer_name VARCHAR(255) NOT NULL,
-        customer_email VARCHAR(255),
-        customer_phone VARCHAR(20),
-        appointment_date DATE NOT NULL,
-        appointment_time TIME NOT NULL,
-        duration_minutes INTEGER DEFAULT 60,
-        notes TEXT,
-        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        cancelled_at TIMESTAMP WITH TIME ZONE,
-        cancellation_reason TEXT
-      );
+      for (const query of queries) {
+        await db.query(query);
+      }
 
-      -- Índices para melhor performance
-      CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);
-      CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
-      CREATE INDEX IF NOT EXISTS idx_appointments_customer ON appointments(customer_name);
-    `);
+    } else {
+      // ===========================================
+      // TABELAS SQLITE (Desenvolvimento)
+      // ===========================================
+      console.log('📋 Verificando tabelas SQLite...');
 
-    console.log('📋 Tabelas criadas/verficadas com sucesso');
+      const queries = [
+        `CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user',
+          name TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
+        `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);`,
+        `CREATE TABLE IF NOT EXISTS appointments (
+          id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+          customer_name TEXT NOT NULL,
+          customer_email TEXT,
+          customer_phone TEXT,
+          appointment_date DATE NOT NULL,
+          appointment_time TIME NOT NULL,
+          duration_minutes INTEGER DEFAULT 60,
+          notes TEXT,
+          status TEXT DEFAULT 'pending',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          cancelled_at DATETIME,
+          cancellation_reason TEXT
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);`,
+        `CREATE INDEX IF NOT EXISTS idx_appointments_customer ON appointments(customer_name);`,
+        `CREATE TABLE IF NOT EXISTS moderator_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          company_name TEXT,
+          services TEXT DEFAULT '[]',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id)
+        );`,
+        `CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings(user_id);`
+      ];
 
-    // Criar usuários de teste
-    await SeedService.ensureSeedUsers();
+      for (const query of queries) {
+        await db.exec(query);
+      }
+    }
+
+    console.log('📋 Tabelas verificadas com sucesso');
+
+    // Criar usuários de teste apenas em desenvolvimento
+    if (!isProduction) {
+      const SeedService = require('../services/seedService');
+      await SeedService.ensureSeedUsers();
+    }
 
   } catch (error) {
     console.error('❌ Erro ao criar tabelas:', error);
@@ -98,40 +221,56 @@ async function createTables(client) {
 
 // Função para executar queries
 async function query(text, params) {
+  if (!db) {
+    await initializeDatabase();
+  }
+
   const start = Date.now();
   try {
-    const res = await pool.query(text, params);
+    let result;
+
+    if (process.env.DATABASE_URL) {
+      // PostgreSQL
+      result = await db.query(text, params);
+    } else {
+      // SQLite
+      if (text.trim().toUpperCase().startsWith('SELECT')) {
+        result = { rows: await db.all(text, params) };
+      } else {
+        result = await db.run(text, params);
+      }
+    }
+
     const duration = Date.now() - start;
-    console.log('📊 Query executada em', duration, 'ms:', text);
-    return res;
+    console.log('📊 Query executada em', duration, 'ms:', text.substring(0, 50) + '...');
+    return result;
+
   } catch (error) {
     console.error('❌ Erro na query:', error);
     throw error;
   }
 }
 
-// Função para obter cliente do pool
+// Função para obter cliente (compatibilidade)
 async function getClient() {
-  const client = await pool.connect();
-  const query = client.query;
-  const release = client.release;
+  if (!db) {
+    await initializeDatabase();
+  }
 
-  // Monkey patch para logging
-  client.query = (...args) => {
-    const start = Date.now();
-    return query.apply(client, args).then(res => {
-      const duration = Date.now() - start;
-      console.log('📊 Query do cliente executada em', duration, 'ms');
-      return res;
-    });
-  };
-
-  client.release = () => {
-    release.apply(client);
-    console.log('🔓 Cliente liberado de volta ao pool');
-  };
-
-  return client;
+  if (process.env.DATABASE_URL) {
+    // PostgreSQL: retorna cliente do pool
+    const client = await db.connect();
+    return {
+      query: async (text, params) => await client.query(text, params),
+      release: () => client.release()
+    };
+  } else {
+    // SQLite: simula interface
+    return {
+      query: async (text, params) => await query(text, params),
+      release: () => {} // SQLite não precisa
+    };
+  }
 }
 
 module.exports = {

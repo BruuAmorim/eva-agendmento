@@ -68,6 +68,8 @@ class UserController {
     try {
       const { name, email, password, role } = req.body;
 
+      console.log('🔍 DEBUG createUser - Input:', { name, email, role }); // DEBUG
+
       // Validações
       if (!name || !email || !password) {
         return res.status(400).json({
@@ -76,10 +78,11 @@ class UserController {
         });
       }
 
-      if (role && !['admin_master', 'user'].includes(role)) {
+      if (role && !['admin_master', 'moderator', 'user'].includes(role)) {
+        console.log('❌ DEBUG - Role inválida:', role); // DEBUG
         return res.status(400).json({
           error: 'Role inválido',
-          message: 'Role deve ser admin_master ou user'
+          message: 'Role deve ser admin_master, moderator ou user'
         });
       }
 
@@ -92,13 +95,25 @@ class UserController {
         });
       }
 
+      // Garantir que a role seja válida e definida
+      const validRoles = ['admin_master', 'moderator', 'user'];
+      const userRole = role && validRoles.includes(role) ? role : 'user';
+
+      console.log('🔍 DEBUG - Role final:', userRole); // DEBUG
+
       // Criar usuário
       const newUser = await User.create({
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password: password,
-        role: role || 'user'
+        role: userRole
       });
+
+      console.log('🔍 DEBUG - Usuário criado:', { id: newUser.id, role: newUser.role }); // DEBUG
+
+      // Verificar se o usuário foi realmente criado com a role correta
+      const createdUser = await User.findByPk(newUser.id);
+      console.log('🔍 DEBUG - Usuário do banco:', { id: createdUser.id, role: createdUser.role }); // DEBUG
 
       // Retornar usuário criado (sem senha)
       const userResponse = {
@@ -143,10 +158,10 @@ class UserController {
       }
 
       // Validações
-      if (role && !['admin_master', 'user'].includes(role)) {
+      if (role && !['admin_master', 'moderator', 'user'].includes(role)) {
         return res.status(400).json({
           error: 'Role inválido',
-          message: 'Role deve ser admin_master ou user'
+          message: 'Role deve ser admin_master, moderator ou user'
         });
       }
 

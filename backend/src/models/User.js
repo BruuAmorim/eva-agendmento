@@ -21,9 +21,12 @@ module.exports = (sequelize) => {
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM('admin_master', 'user'),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: 'user',
+      validate: {
+        isIn: [['admin_master', 'moderator', 'user']]
+      }
     },
     name: {
       type: DataTypes.STRING(255),

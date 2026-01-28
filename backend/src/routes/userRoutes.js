@@ -8,6 +8,23 @@ const router = express.Router();
 router.use(verifyToken);
 router.use(requireAdminMaster);
 
+// Endpoint de debug para testar criação de usuário (sem middleware)
+router.post('/debug-create', async (req, res) => {
+  console.log('🐛 DEBUG ENDPOINT - Body recebido:', JSON.stringify(req.body, null, 2));
+  console.log('🐛 DEBUG ENDPOINT - Headers:', req.headers);
+
+  const { name, email, password, role } = req.body;
+  console.log('🐛 DEBUG ENDPOINT - Campos extraídos:', { name, email, role });
+
+  res.json({
+    received: { name, email, role },
+    headers: {
+      authorization: req.headers.authorization ? 'Present' : 'Missing',
+      'content-type': req.headers['content-type']
+    }
+  });
+});
+
 // Rotas de gerenciamento de usuários
 router.get('/', UserController.getAllUsers);
 router.get('/:id', UserController.getUserById);

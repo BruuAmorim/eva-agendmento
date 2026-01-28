@@ -54,6 +54,14 @@ router.get('/', appointmentController.getAppointments);
 // GET /api/appointments/stats/overview - Estatísticas dos agendamentos
 router.get('/stats/overview', appointmentController.getAppointmentStats);
 
+// GET /api/appointments/disponibilidade - Consultar horários disponíveis
+// @api {get} /appointments/disponibilidade Consultar horários disponíveis
+// @apiName GetDisponibilidade
+// @apiGroup Appointments
+// @apiParam {String} date Data no formato YYYY-MM-DD
+// @apiSuccess {Object[]} available_times Lista de horários disponíveis
+router.get('/disponibilidade', appointmentController.getDisponibilidade);
+
 // GET /api/appointments/available/:date - Horários disponíveis para uma data
 // @api {get} /appointments/available/:date Buscar horários disponíveis
 // @apiName GetAvailableSlots
@@ -108,12 +116,35 @@ router.put('/:id', validateAppointment, appointmentController.updateAppointment)
 // PUT /api/appointments/:id/cancel - Cancelar agendamento
 router.put('/:id/cancel', appointmentController.cancelAppointment);
 
+// PUT /api/appointments - Atualizar agendamento por protocolo (protocolo no body)
+// @api {put} /appointments Atualizar agendamento por protocolo
+// @apiName UpdateAppointmentByProtocolBody
+// @apiGroup Appointments
+// @apiParam {String} protocol Protocolo do agendamento (obrigatório)
+// @apiParam {String} [date] Nova data no formato YYYY-MM-DD
+// @apiParam {String} [time] Novo horário no formato HH:MM
+router.put('/', appointmentController.updateAppointmentByProtocolBody);
+
+// DELETE /api/appointments - Deletar agendamento por protocolo (protocolo no body)
+// @api {delete} /appointments Excluir agendamento por protocolo
+// @apiName DeleteAppointmentByProtocolBody
+// @apiGroup Appointments
+// @apiParam {String} protocol Protocolo do agendamento (no body da requisição)
+router.delete('/', appointmentController.deleteAppointmentByProtocolBody);
+
 // DELETE /api/appointments/:id - Deletar agendamento
 // @api {delete} /appointments/:id Excluir agendamento
 // @apiName DeleteAppointment
 // @apiGroup Appointments
 // @apiParam {String} id ID do agendamento
 router.delete('/:id', appointmentController.deleteAppointment);
+
+// DELETE /api/appointments/protocol/:protocol - Deletar agendamento por protocolo
+// @api {delete} /appointments/protocol/:protocol Excluir agendamento por protocolo
+// @apiName DeleteAppointmentByProtocol
+// @apiGroup Appointments
+// @apiParam {String} protocol Protocolo do agendamento (formato: YYYYMMDD-XXXX)
+router.delete('/protocol/:protocol', appointmentController.deleteAppointmentByProtocol);
 
 module.exports = router;
 

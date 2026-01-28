@@ -38,3 +38,8 @@ echo.
 echo Pressione qualquer tecla para continuar...
 pause > nul
 
+
+
+
+
+
