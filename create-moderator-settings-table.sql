@@ -43,3 +43,4 @@ FROM moderator_settings;
 -- - services: Array JSON com os serviços oferecidos
 -- - UNIQUE(user_id): Garante que cada moderador tenha apenas uma configuração
 
+

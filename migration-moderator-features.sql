@@ -28,3 +28,4 @@ CREATE INDEX IF NOT EXISTS idx_appointments_service_type ON appointments(service
 -- - service_type: Permite categorizar agendamentos por tipo de serviço
 -- - Índices: Melhoram performance das consultas
 
+

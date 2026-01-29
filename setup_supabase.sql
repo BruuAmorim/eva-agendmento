@@ -96,3 +96,4 @@ ORDER BY tablename;
 --    - JWT_SECRET=sua_chave_segura
 -- 3. Faça o deploy no Render
 -- =====================================================
+
