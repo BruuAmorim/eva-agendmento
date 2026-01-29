@@ -3,7 +3,14 @@
 
 // URL base da API (configurada dinamicamente via config-api.js)
 // A configuração é feita no arquivo config-api.js e acessada via window.API_CONFIG
-const API_BASE_URL = window.API_CONFIG ? window.API_CONFIG.getBaseUrl() : 'http://localhost:3000/api';
+const getApiBaseUrl = () => {
+  if (window.API_CONFIG && window.API_CONFIG.baseUrl) {
+    return window.API_CONFIG.baseUrl;
+  }
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class APIClient {
     constructor(baseURL = API_BASE_URL) {
