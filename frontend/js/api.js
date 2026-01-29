@@ -29,6 +29,7 @@ class APIClient {
                 'Content-Type': 'application/json',
                 ...options.headers
             },
+            credentials: 'include', // Importante para CORS com cookies
             ...options
         };
 

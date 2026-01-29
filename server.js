@@ -21,41 +21,42 @@ const app = express();
 const PORT = API_CONFIG.port;
 
 // Middlewares de segurança e configuração
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+}));
 
 // --- CONFIGURAÇÃO DE CORS PARA INTEGRAÇÕES EXTERNAS ---
 // Permite integrações externas (frontend, n8n, webhooks, etc.) acessarem a API
-app.use(cors({
+const corsOptions = {
   origin: [
-    'https://eva-agendamento.vercel.app',  // Frontend em produção (Vercel)
-    'http://localhost:5173',               // Desenvolvimento local do frontend
-    'http://localhost:3000',               // API local
-    'http://localhost:3001',               // API local alternativa
-    'http://127.0.0.1:5173',              // Desenvolvimento alternativo
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin', 'X-Requested-With'],
-  exposedHeaders: ['Access-Control-Allow-Origin']
-}));
-
-// Middleware adicional para OPTIONS requests (preflight)
-app.options('*', cors({
-  origin: [
-    'https://eva-agendamento.vercel.app',
+    process.env.FRONTEND_URL || 'https://eva-agendamento.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000',
+    'http://localhost:5174',
     'http://localhost:3001',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin', 'X-Requested-With']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-API-Key'
+  ],
+  exposedHeaders: ['Authorization'],
+  maxAge: 86400 // 24 horas
+};
+
+app.use(cors(corsOptions));
+
+// Handler explícito para preflight requests
+app.options('*', cors(corsOptions));
 // -----------------------------
 
 // Health check básico (compatibilidade)
