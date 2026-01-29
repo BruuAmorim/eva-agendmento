@@ -12,7 +12,7 @@ class AuthManager {
     getApiBaseUrl() {
         // Se estiver no Vercel, usar API de produção
         if (window.location.hostname.includes('vercel.app')) {
-            return 'https://eva-agendamento.onrender.com';
+            return 'https://evaagendamento.onrender.com';
         }
 
         // Caso contrário, usar localhost

@@ -34,7 +34,7 @@ const API_CONFIG = {
     if (isVercel) {
       // Quando estiver no Vercel, usar a API de produção (Render)
       console.log('🔧 Detectado Vercel - usando API de produção');
-      return 'https://eva-agendamento.onrender.com/api';
+      return 'https://evaagendamento.onrender.com/api';
     }
 
     if (API_CONFIG.isProduction()) {
@@ -60,12 +60,12 @@ const API_CONFIG = {
 };
 
 // URL base da API (calculada dinamicamente)
-const API_BASE_URL = API_CONFIG.getBaseUrl();
+API_CONFIG.baseUrl = API_CONFIG.getBaseUrl();
 
 // Função para testar conectividade com a API
 API_CONFIG.testConnection = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
+    const response = await fetch(`${API_CONFIG.baseUrl.replace('/api', '')}/health`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -77,14 +77,14 @@ API_CONFIG.testConnection = async () => {
     return {
       success: response.ok,
       status: response.status,
-      url: API_BASE_URL
+      url: API_CONFIG.baseUrl
     };
   } catch (error) {
     console.warn('Falha ao testar conexão com API:', error.message);
     return {
       success: false,
       error: error.message,
-      url: API_BASE_URL
+      url: API_CONFIG.baseUrl
     };
   }
 };
@@ -94,7 +94,7 @@ API_CONFIG.getDebugInfo = () => {
   return {
     isProduction: API_CONFIG.isProduction(),
     environment: API_CONFIG.environment.name(),
-    apiUrl: API_BASE_URL,
+    apiUrl: API_CONFIG.baseUrl,
     origin: window.location.origin,
     hostname: window.location.hostname,
     protocol: window.location.protocol,

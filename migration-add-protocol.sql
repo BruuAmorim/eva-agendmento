@@ -11,3 +11,4 @@ ALTER TABLE appointments ADD COLUMN protocol TEXT UNIQUE;
 
 
 
+

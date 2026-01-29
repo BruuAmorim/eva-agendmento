@@ -18,7 +18,7 @@ class APIClient {
 
         // Detectar ambiente e usar URL apropriada
         const isVercel = window.location.hostname.includes('vercel.app');
-        return isVercel ? 'https://eva-agendamento.onrender.com/api' : 'http://localhost:3000/api';
+        return isVercel ? 'https://evaagendamento.onrender.com/api' : 'http://localhost:3000/api';
     }
 
     // Método auxiliar para fazer requisições HTTP

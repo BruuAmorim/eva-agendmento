@@ -20,44 +20,48 @@ const moderatorRoutes = require('./backend/src/routes/moderator');
 const app = express();
 const PORT = API_CONFIG.port;
 
-// Middlewares de segurança e configuração
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
-}));
+// ==========================================
+// CORS - DEVE SER A PRIMEIRA CONFIGURAÇÃO
+// ==========================================
 
-// --- CONFIGURAÇÃO DE CORS PARA INTEGRAÇÕES EXTERNAS ---
-// Permite integrações externas (frontend, n8n, webhooks, etc.) acessarem a API
-const corsOptions = {
-  origin: [
-    process.env.FRONTEND_URL || 'https://eva-agendamento.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:5174',
-    'http://localhost:3001',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
-  ],
+const allowedOrigins = [
+  'https://evagendamento.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3001'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permite requisições sem origin (Postman, mobile apps)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('🚫 Origin bloqueada:', origin);
+      callback(null, false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'X-API-Key'
-  ],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Authorization'],
-  maxAge: 86400 // 24 horas
-};
+  maxAge: 86400
+}));
 
-app.use(cors(corsOptions));
+// Handler explícito para OPTIONS (preflight)
+app.options('*', cors());
 
-// Handler explícito para preflight requests
-app.options('*', cors(corsOptions));
-// -----------------------------
+// Log para debug
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
+  next();
+});
+
+// DEPOIS vem express.json e outras configs
+// app.use(helmet()); // COMENTADO TEMPORARIAMENTE PARA DEBUG CORS
 
 // Health check básico (compatibilidade)
 app.get('/health', (req, res) => {
