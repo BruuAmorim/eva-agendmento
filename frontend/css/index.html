@@ -112,7 +112,15 @@
         this.setLoading(true);
 
         try {
-          const response = await fetch(`${window.API_CONFIG ? window.API_CONFIG.baseUrl : 'http://localhost:3000/api'}/auth/login`, {
+          const apiUrl = (() => {
+            if (window.API_CONFIG && window.API_CONFIG.baseUrl) {
+              return window.API_CONFIG.baseUrl;
+            }
+            const isVercel = window.location.hostname.includes('vercel.app');
+            return isVercel ? 'https://eva-agendamento.onrender.com/api' : 'http://localhost:3000/api';
+          })();
+
+          const response = await fetch(`${apiUrl}/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

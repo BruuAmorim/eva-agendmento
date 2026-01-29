@@ -3,12 +3,22 @@
 
 // URL base da API (configurada dinamicamente via config-api.js)
 // A configuração é feita no arquivo config-api.js e acessada via window.API_CONFIG
-// Usar diretamente do config-api.js para evitar conflitos
-const API_BASE_URL = window.API_CONFIG ? window.API_CONFIG.baseUrl : 'http://localhost:3000/api';
 
 class APIClient {
-    constructor(baseURL = API_BASE_URL) {
-        this.baseURL = baseURL;
+    constructor(baseURL = null) {
+        this.baseURL = baseURL || this.getApiBaseUrl();
+    }
+
+    // Método para obter URL da API com fallback
+    getApiBaseUrl() {
+        // Tentar usar configuração do config-api.js
+        if (window.API_CONFIG && window.API_CONFIG.baseUrl) {
+            return window.API_CONFIG.baseUrl;
+        }
+
+        // Detectar ambiente e usar URL apropriada
+        const isVercel = window.location.hostname.includes('vercel.app');
+        return isVercel ? 'https://eva-agendamento.onrender.com/api' : 'http://localhost:3000/api';
     }
 
     // Método auxiliar para fazer requisições HTTP
