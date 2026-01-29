@@ -27,7 +27,7 @@ app.use(helmet());
 // Permite integrações externas (frontend, n8n, webhooks, etc.) acessarem a API
 app.use(cors({
   origin: [
-    'https://eva-agendamento.vercel.app',  // Frontend em produção
+    'https://eva-agendamento.vercel.app',  // Frontend em produção (Vercel)
     'http://localhost:5173',               // Desenvolvimento local do frontend
     'http://localhost:3000',               // API local
     'http://localhost:3001',               // API local alternativa
@@ -37,7 +37,24 @@ app.use(cors({
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin', 'X-Requested-With'],
+  exposedHeaders: ['Access-Control-Allow-Origin']
+}));
+
+// Middleware adicional para OPTIONS requests (preflight)
+app.options('*', cors({
+  origin: [
+    'https://eva-agendamento.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin', 'X-Requested-With']
 }));
 // -----------------------------
 
