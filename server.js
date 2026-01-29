@@ -24,42 +24,20 @@ const PORT = API_CONFIG.port;
 app.use(helmet());
 
 // --- CONFIGURAÇÃO DE CORS PARA INTEGRAÇÕES EXTERNAS ---
-// Permite integrações externas (n8n, webhooks, etc.) acessarem a API
+// Permite integrações externas (frontend, n8n, webhooks, etc.) acessarem a API
 app.use(cors({
-  origin: function (origin, callback) {
-    // Permite requisições sem origem (como apps mobile, Postman, Curl, n8n)
-    if (!origin) return callback(null, true);
-
-    // Em desenvolvimento: permite localhost/127.0.0.1 em qualquer porta
-    if (API_CONFIG.environment === 'development') {
-      if (origin.match(API_CONFIG.cors.development)) {
-        return callback(null, true);
-      }
-    }
-
-    // Em produção: verifica origens permitidas
-    if (API_CONFIG.environment === 'production') {
-      if (API_CONFIG.cors.production.includes(origin)) {
-        return callback(null, true);
-      }
-    }
-
-    // Permite o domínio do frontend se configurado
-    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
-      return callback(null, true);
-    }
-
-    // Para integrações externas (n8n), permite se não estiver em produção
-    // ou se a origem estiver explicitamente permitida
-    if (API_CONFIG.environment !== 'production' || API_CONFIG.cors.production.length === 0) {
-      return callback(null, true);
-    }
-
-    // Bloqueia origens não autorizadas
-    const msg = 'A política de CORS deste site não permite acesso desta origem.';
-    return callback(new Error(msg), false);
-  },
-  credentials: true
+  origin: [
+    'https://eva-agendamento.vercel.app',  // Frontend em produção
+    'http://localhost:5173',               // Desenvolvimento local do frontend
+    'http://localhost:3000',               // API local
+    'http://localhost:3001',               // API local alternativa
+    'http://127.0.0.1:5173',              // Desenvolvimento alternativo
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
 }));
 // -----------------------------
 

@@ -37,6 +37,9 @@ const API_CONFIG = {
       return 'https://eva-agendamento.onrender.com/api';
     }
 
+    // Fallback para localhost se não for Vercel
+    return 'http://localhost:3000/api';
+
     if (API_CONFIG.isProduction()) {
       // Em produção normal: usar a mesma origem que o frontend
       return `${window.location.origin}/api`;

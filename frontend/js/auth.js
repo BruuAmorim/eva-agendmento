@@ -3,9 +3,20 @@ class AuthManager {
     constructor() {
         this.currentUser = null;
         this.token = null;
-        // Backend API (porta 3000). Mantemos explícito para evitar chamar o servidor estático (8080).
-        this.apiBaseUrl = 'http://localhost:3000';
+        // Backend API - usar configuração dinâmica
+        this.apiBaseUrl = this.getApiBaseUrl();
         this.init();
+    }
+
+    // Método para obter URL da API dinamicamente
+    getApiBaseUrl() {
+        // Se estiver no Vercel, usar API de produção
+        if (window.location.hostname.includes('vercel.app')) {
+            return 'https://eva-agendamento.onrender.com';
+        }
+
+        // Caso contrário, usar localhost
+        return 'http://localhost:3000';
     }
 
     init() {
