@@ -28,20 +28,20 @@ const API_CONFIG = {
 
   // Obter URL base da API
   getBaseUrl: () => {
+    // Detectar se está rodando no Vercel
+    const isVercel = window.location.hostname.includes('vercel.app');
+
+    if (isVercel) {
+      // Quando estiver no Vercel, usar a API de produção (Render)
+      console.log('🔧 Detectado Vercel - usando API de produção');
+      return 'https://eva-agendamento.onrender.com/api';
+    }
+
     if (API_CONFIG.isProduction()) {
-      // Em produção: usar a mesma origem que o frontend
+      // Em produção normal: usar a mesma origem que o frontend
       return `${window.location.origin}/api`;
     } else {
-      // Em desenvolvimento: tentar portas comuns ou usar variável de ambiente
-      const devPorts = [3000, 3001, 8000, 8080];
-
-      // Se uma URL específica foi definida via variável global (opcional)
-      if (window.API_BASE_URL) {
-        return window.API_BASE_URL;
-      }
-
-      // Tentar detectar automaticamente a porta do backend
-      // Por padrão, assumir 3000 (porta comum para desenvolvimento)
+      // Em desenvolvimento local: usar localhost
       return `http://localhost:3000/api`;
     }
   },
