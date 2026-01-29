@@ -120,7 +120,7 @@
             return isVercel ? 'https://evaagendamento.onrender.com/api' : 'http://localhost:3000/api';
           })();
 
-          const response = await fetch(`${apiUrl}/auth/login`, {
+          const response = await fetch(`${apiUrl}/api/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

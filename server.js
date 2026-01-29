@@ -29,39 +29,66 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
-  'http://localhost:3001'
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:3001'
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Permite requisições sem origin (Postman, mobile apps)
+    // Permite requisições sem origin (Postman, mobile apps, curl)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.log('🚫 Origin bloqueada:', origin);
-      callback(null, false);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-API-Key'
+  ],
   exposedHeaders: ['Authorization'],
-  maxAge: 86400
+  maxAge: 86400, // 24 horas
+  optionsSuccessStatus: 200 // Para legacy browsers
+};
+
+// Aplicar CORS middleware
+app.use(cors(corsOptions));
+
+// Handler explícito para OPTIONS (preflight) - CORRIGIDO
+app.options('*', cors(corsOptions));
+
+// Helmet com configurações CORS-friendly
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://evagendamento.vercel.app", "http://localhost:*"],
+    },
+  }
 }));
 
-// Handler explícito para OPTIONS (preflight)
-app.options('*', cors());
-
-// Log para debug
+// Log para debug CORS
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'} - User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'Unknown'}`);
   next();
 });
-
-// DEPOIS vem express.json e outras configs
-// app.use(helmet()); // COMENTADO TEMPORARIAMENTE PARA DEBUG CORS
 
 // Health check básico (compatibilidade)
 app.get('/health', (req, res) => {
