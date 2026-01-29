@@ -63,16 +63,6 @@ async function initializeDatabase() {
   }
 }
 
-// Event listeners para monitoramento
-pool.on('connect', (client) => {
-  console.log('🔗 Nova conexão estabelecida com o banco de dados');
-});
-
-pool.on('error', (err, client) => {
-  console.error('❌ Erro inesperado no pool de conexões:', err);
-  process.exit(-1);
-});
-
 // Função para conectar ao banco
 async function connectDB() {
   try {
@@ -273,11 +263,41 @@ async function getClient() {
   }
 }
 
+// ===========================================
+// FUNÇÕES DE INTERFACE UNIFICADA
+// ===========================================
+
+// Funções que delegam para o db inicializado
+async function run(sql, params, callback) {
+  if (!db) await initializeDatabase();
+  return db.run(sql, params, callback);
+}
+
+async function get(sql, params, callback) {
+  if (!db) await initializeDatabase();
+  return db.get(sql, params, callback);
+}
+
+async function all(sql, params, callback) {
+  if (!db) await initializeDatabase();
+  return db.all(sql, params, callback);
+}
+
+async function query(sql, params, callback) {
+  if (!db) await initializeDatabase();
+  return db.query(sql, params, callback);
+}
+
+// ===========================================
+// EXPORTAÇÃO
+// ===========================================
+
 module.exports = {
-  pool,
   connectDB,
-  query,
-  getClient
+  run,
+  get,
+  all,
+  query
 };
 
 
