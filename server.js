@@ -21,73 +21,79 @@ const app = express();
 const PORT = API_CONFIG.port;
 
 // ==========================================
-// CORS - DEVE SER A PRIMEIRA CONFIGURAÇÃO
+// 1. CORS - PRIMEIRO MIDDLEWARE (CRÍTICO)
 // ==========================================
 
 const allowedOrigins = [
-  'https://evagendamento.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174',
-  'http://127.0.0.1:3001'
+  'https://evagendamento.vercel.app',  // ✅ PRODUÇÃO
+  'http://localhost:3000',             // ✅ DESENVOLVIMENTO
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite requisições sem origin (Postman, mobile apps, curl)
+    // Permite requisições sem origin (Postman, curl, mobile apps)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('🚫 Origin bloqueada:', origin);
+      console.log('🚫 CORS: Origin bloqueada:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
     'Accept',
-    'Origin',
-    'X-API-Key'
+    'Origin'
   ],
   exposedHeaders: ['Authorization'],
   maxAge: 86400, // 24 horas
-  optionsSuccessStatus: 200 // Para legacy browsers
+  optionsSuccessStatus: 200
 };
 
-// Aplicar CORS middleware
+// ✅ CORS aplicado ANTES de qualquer outro middleware
 app.use(cors(corsOptions));
 
-// Handler explícito para OPTIONS (preflight) - CORRIGIDO
+// ✅ Handler explícito para OPTIONS (preflight) - CRÍTICO
 app.options('*', cors(corsOptions));
 
-// Helmet com configurações CORS-friendly
+// ==========================================
+// 2. SECURITY - HELMET (simplificado para evitar conflitos)
+// ==========================================
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://evagendamento.vercel.app", "http://localhost:*"],
-    },
-  }
+  // CSP removido temporariamente para evitar conflitos
 }));
 
-// Log para debug CORS
+// ==========================================
+// 3. LOGGING CORS (debug)
+// ==========================================
+
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'} - User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'Unknown'}`);
+  if (req.method === 'OPTIONS' || req.path.includes('/api/')) {
+    console.log(`🔄 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
+  }
   next();
+});
+
+// ==========================================
+// 4. CORS TEST ENDPOINT (debug)
+// ==========================================
+
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS está funcionando!',
+    origin: req.headers.origin,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    allowedOrigins: allowedOrigins
+  });
 });
 
 // Health check básico (compatibilidade)
@@ -160,16 +166,30 @@ app.get('/api/slots/:date', appointmentController.getAvailableSlots);
 // Rota adicional para disponibilidade em português (compatibilidade com n8n)
 app.get('/api/agendamento/disponibilidade', appointmentController.getDisponibilidade);
 
-// Middleware de tratamento de erros
+// ==========================================
+// ROTAS CARREGADAS - CORS JÁ APLICADO ACIMA
+// ==========================================
+
+// Middleware de tratamento de erros (DEVE VIR APÓS AS ROTAS)
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ Erro:', err.message);
+  // Não definir headers CORS aqui - já foram definidos pelo middleware CORS
+
+  // Para erros CORS específicos
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      error: 'CORS Error',
+      message: 'Origin not allowed'
+    });
+  }
+
   res.status(500).json({
     error: 'Erro interno do servidor',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Algo deu errado'
   });
 });
 
-// Middleware para rotas não encontradas
+// Middleware para rotas não encontradas (DEVE VIR POR ÚLTIMO)
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Rota não encontrada',
