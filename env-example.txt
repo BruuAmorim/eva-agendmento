@@ -43,4 +43,3 @@ ALLOWED_ORIGINS=https://seu-app-frontend.vercel.app
 # DB_NAME=evagendamento
 # DB_USER=postgres
 # DB_PASSWORD=sua_senha_local
-

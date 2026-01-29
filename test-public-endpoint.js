@@ -75,4 +75,3 @@ if (require.main === module) {
   runPublicTest();
 }
 
-

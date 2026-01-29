@@ -33,7 +33,7 @@ const API_CONFIG = {
   baseUrl: API_BASE_URL,
 
   // Porta do servidor
-  port: process.env.PORT || 3001,
+  port: process.env.PORT || 3000,
 
   // Ambiente
   environment: process.env.NODE_ENV || 'development',

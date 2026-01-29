@@ -16,4 +16,3 @@ ALTER TABLE users ADD CONSTRAINT users_role_check
 -- ALTER TABLE users ADD CONSTRAINT users_role_check_new
 --     CHECK (role IN ('admin_master', 'moderator', 'user'));
 
-

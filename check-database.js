@@ -71,4 +71,3 @@ if (require.main === module) {
 
 module.exports = { checkDatabase };
 
-

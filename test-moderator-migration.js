@@ -120,4 +120,3 @@ if (require.main === module) {
 
 module.exports = { testModeratorMigration };
 
-

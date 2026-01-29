@@ -28,23 +28,21 @@ const API_CONFIG = {
 
   // Obter URL base da API
   getBaseUrl: () => {
-    // Se estiver no Vercel (produção), permitir acesso ao backend local para desenvolvimento
-    const isVercel = window.location.hostname.includes('vercel.app');
-
-    if (isVercel) {
-      // Em produção no Vercel: tentar conectar ao backend local para desenvolvimento
-      // NOTA: Isso só funciona se o backend estiver rodando localmente durante desenvolvimento
-      console.log('🔧 Detectado Vercel - usando backend local para desenvolvimento');
-      return `http://localhost:3001/api`;
-    }
-
     if (API_CONFIG.isProduction()) {
-      // Em produção normal: usar a mesma origem que o frontend
+      // Em produção: usar a mesma origem que o frontend
       return `${window.location.origin}/api`;
     } else {
-      // Em desenvolvimento local: usar localhost
-      const port = window.location.port || 3001;
-      return `http://localhost:${port}/api`;
+      // Em desenvolvimento: tentar portas comuns ou usar variável de ambiente
+      const devPorts = [3000, 3001, 8000, 8080];
+
+      // Se uma URL específica foi definida via variável global (opcional)
+      if (window.API_BASE_URL) {
+        return window.API_BASE_URL;
+      }
+
+      // Tentar detectar automaticamente a porta do backend
+      // Por padrão, assumir 3000 (porta comum para desenvolvimento)
+      return `http://localhost:3000/api`;
     }
   },
 
@@ -62,12 +60,12 @@ const API_CONFIG = {
 };
 
 // URL base da API (calculada dinamicamente)
-API_CONFIG.baseUrl = API_CONFIG.getBaseUrl();
+const API_BASE_URL = API_CONFIG.getBaseUrl();
 
 // Função para testar conectividade com a API
 API_CONFIG.testConnection = async () => {
   try {
-    const response = await fetch(`${API_CONFIG.baseUrl.replace('/api', '')}/health`, {
+    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -79,14 +77,14 @@ API_CONFIG.testConnection = async () => {
     return {
       success: response.ok,
       status: response.status,
-      url: API_CONFIG.baseUrl
+      url: API_BASE_URL
     };
   } catch (error) {
     console.warn('Falha ao testar conexão com API:', error.message);
     return {
       success: false,
       error: error.message,
-      url: API_CONFIG.baseUrl
+      url: API_BASE_URL
     };
   }
 };
@@ -96,7 +94,7 @@ API_CONFIG.getDebugInfo = () => {
   return {
     isProduction: API_CONFIG.isProduction(),
     environment: API_CONFIG.environment.name(),
-    apiUrl: API_CONFIG.baseUrl,
+    apiUrl: API_BASE_URL,
     origin: window.location.origin,
     hostname: window.location.hostname,
     protocol: window.location.protocol,
@@ -111,4 +109,3 @@ if (API_CONFIG.environment.debug()) {
 
 // Exportar configurações
 window.API_CONFIG = API_CONFIG;
-

@@ -97,4 +97,3 @@ if (require.main === module) {
 
 module.exports = { checkDatabaseSetup };
 
-

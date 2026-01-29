@@ -44,4 +44,3 @@ echo 3. Se tudo OK: Teste completo com node test-moderator-auth.js
 
 pause
 
-

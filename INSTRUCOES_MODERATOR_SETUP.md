@@ -198,4 +198,3 @@ GET /api/moderator/company-info
 
 **🎉 Implementação do perfil Moderador concluída com sucesso!** ✨
 
-

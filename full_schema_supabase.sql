@@ -200,4 +200,3 @@ FROM moderator_settings;
 -- Senhas atuais:
 -- - brunadevv@gmail.com: admin123
 -- - usuarioteste@gmail.com: Mudar@123
-
